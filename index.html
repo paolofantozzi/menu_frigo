@@ -454,9 +454,9 @@ class Component extends DCLogic {
   ];
 
   catOrder = ["Vodka", "Liquori e amari", "Scotch whisky", "Gin"];
-  strengthOrder = ["Analcolico","Leggero","Medio","Forte"];
+  strengthOrder = ["Analcolico (0%)", "Leggero (< 15%)", "Medio (15-25%)", "Forte (> 25%)"];
 
-  strengthOf(abv){ if(abv<=0) return "Analcolico"; if(abv<15) return "Leggero"; if(abv<25) return "Medio"; return "Forte"; }
+  strengthOf(abv){ if(abv<=0) return "Analcolico (0%)"; if(abv<15) return "Leggero (< 15%)"; if(abv<25) return "Medio (15-25%)"; return "Forte (> 25%)"; }
 
   catAnchor(cat){ return "cat-"+this.catOrder.indexOf(cat); }
   scrollToCat(cat){
