@@ -1,182 +1,324 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="./support.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="./support.js"></script>
 </head>
+
 <body>
-<x-dc>
-<helmet>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="./image-slot.js"></script>
-<style>
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: #fdf5ea; }
-  body { font-family: 'Work Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; color: #3a2f26; }
-  a { color: #e05a2b; text-decoration: none; border-bottom: 1px solid rgba(224,90,43,.35); }
-  a:hover { color: #e05a2b; border-bottom-color: rgba(255,138,102,.7); }
-  ::selection { background: rgba(230,169,75,.3); }
-  .leaflet-container { background: #d7e3e6; font-family: 'Work Sans', sans-serif; }
-  .leaflet-popup-content-wrapper { background: #ffffff; color: #3a2f26; border-radius: 10px; box-shadow: 0 12px 30px rgba(120,80,40,.22); }
-  .leaflet-popup-tip { background: #ffffff; }
-  .leaflet-popup-content { margin: 12px 14px; font-family: 'Work Sans', sans-serif; }
-  .leaflet-control-zoom a { background: #ffffff; color: #3a2f26; border-color: rgba(0,0,0,.1); }
-  .leaflet-control-zoom a:hover { background: #fff0e2; }
-  .leaflet-bar { border: none; box-shadow: 0 4px 14px rgba(120,80,40,.2); }
-  .dmk-pin { display:flex; align-items:center; justify-content:center; }
-  .dmk-pin span { width:15px; height:15px; border-radius:50%; background:#ff6b3d; border:2.5px solid #ffffff; box-shadow:0 0 0 2px rgba(255,107,61,.4), 0 3px 8px rgba(120,80,40,.35); transition: transform .15s; }
-  .dmk-pin.on span { background:#12b5a5; }
-  input, button { font-family: inherit; }
-  input:focus { outline: none; }
-  @keyframes dmkfade { from { opacity:0; transform: translateY(6px);} to {opacity:1; transform:none;} }
-</style>
-</helmet>
-<div style="max-width:680px; margin:0 auto; min-height:100vh; background:#fdf5ea; position:relative;">
+  <x-dc>
+    <helmet>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600&display=swap"
+        rel="stylesheet">
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+      <script src="./image-slot.js"></script>
+      <style>
+        * {
+          box-sizing: border-box;
+        }
 
-  <header style="padding:26px 20px 16px;">
-    <div style="font-size:11px; letter-spacing:.32em; text-transform:uppercase; color:#e05a2b; margin-bottom:8px;">Carta dei drink · Edizione mondiale</div>
-    <h1 style="font-family:'Cormorant Garamond',serif; font-weight:700; font-size:40px; line-height:.98; margin:0; color:#2a2018;">Il Giro del Mondo<br>in un Bicchiere</h1>
-    <p style="margin:12px 0 0; color:#6b5a48; font-size:14.5px; line-height:1.5; max-width:42ch;">Cocktail, distillati e sorsi da ogni angolo del pianeta. Cerca, filtra e tocca un segnalino sulla mappa per scoprire da dove arriva ogni drink.</p>
-  </header>
+        html,
+        body {
+          margin: 0;
+          padding: 0;
+          background: #fdf5ea;
+        }
 
-  <div style="position:relative; z-index:600; background:#fdf5ea;">
-    <div style="position:relative; height:38vh; min-height:230px; margin:0 12px; border-radius:14px; overflow:hidden; border:1px solid rgba(0,0,0,.08);">
-      <div id="drinkmap" style="position:absolute; inset:0;"></div>
-      <div style="position:absolute; top:10px; right:12px; z-index:500; background:rgba(255,255,255,.92); backdrop-filter:blur(6px); padding:5px 11px; border-radius:999px; font-size:11.5px; color:#5c4d3f; letter-spacing:.04em; pointer-events:none; white-space:nowrap;">{{ mapCount }}</div>
-    </div>
-    <div style="display:flex; gap:8px; padding:11px 12px 12px; align-items:center;">
-      <div style="position:relative; flex:1;">
-        <span style="position:absolute; left:13px; top:50%; transform:translateY(-50%); color:#a98a63; font-size:15px;">⌕</span>
-        <input value="{{ searchText }}" onInput="{{ onSearch }}" placeholder="Cerca drink, ingrediente, luogo…" style="width:100%; padding:12px 14px 12px 34px; background:#ffffff; border:1px solid rgba(0,0,0,.12); border-radius:11px; color:#3a2f26; font-size:14.5px;">
-      </div>
-      <button onClick="{{ toggleFilters }}" style="position:relative; padding:12px 15px; background:{{ filterBtnBg }}; color:{{ filterBtnColor }}; border:1px solid rgba(230,169,75,.35); border-radius:11px; font-size:13.5px; font-weight:600; cursor:pointer; white-space:nowrap;">Filtri{{ filterBadge }}</button>
-    </div>
+        body {
+          font-family: 'Work Sans', system-ui, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          color: #3a2f26;
+        }
 
-    <sc-if value="{{ showFilters }}" hint-placeholder-val="{{ false }}">
-      <div style="padding:2px 14px 16px; max-height:52vh; overflow-y:auto; animation:dmkfade .18s ease;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-          <span style="font-size:13px; color:#6b5a48;">{{ resultCount }}</span>
-          <button onClick="{{ clearAll }}" style="background:none; border:none; color:#a07c52; font-size:12.5px; cursor:pointer; text-decoration:underline;">Azzera filtri</button>
+        a {
+          color: #e05a2b;
+          text-decoration: none;
+          border-bottom: 1px solid rgba(224, 90, 43, .35);
+        }
+
+        a:hover {
+          color: #e05a2b;
+          border-bottom-color: rgba(255, 138, 102, .7);
+        }
+
+        ::selection {
+          background: rgba(230, 169, 75, .3);
+        }
+
+        .leaflet-container {
+          background: #d7e3e6;
+          font-family: 'Work Sans', sans-serif;
+        }
+
+        .leaflet-popup-content-wrapper {
+          background: #ffffff;
+          color: #3a2f26;
+          border-radius: 10px;
+          box-shadow: 0 12px 30px rgba(120, 80, 40, .22);
+        }
+
+        .leaflet-popup-tip {
+          background: #ffffff;
+        }
+
+        .leaflet-popup-content {
+          margin: 12px 14px;
+          font-family: 'Work Sans', sans-serif;
+        }
+
+        .leaflet-control-zoom a {
+          background: #ffffff;
+          color: #3a2f26;
+          border-color: rgba(0, 0, 0, .1);
+        }
+
+        .leaflet-control-zoom a:hover {
+          background: #fff0e2;
+        }
+
+        .leaflet-bar {
+          border: none;
+          box-shadow: 0 4px 14px rgba(120, 80, 40, .2);
+        }
+
+        .dmk-pin {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .dmk-pin span {
+          width: 15px;
+          height: 15px;
+          border-radius: 50%;
+          background: #ff6b3d;
+          border: 2.5px solid #ffffff;
+          box-shadow: 0 0 0 2px rgba(255, 107, 61, .4), 0 3px 8px rgba(120, 80, 40, .35);
+          transition: transform .15s;
+        }
+
+        .dmk-pin.on span {
+          background: #12b5a5;
+        }
+
+        input,
+        button {
+          font-family: inherit;
+        }
+
+        input:focus {
+          outline: none;
+        }
+
+        @keyframes dmkfade {
+          from {
+            opacity: 0;
+            transform: translateY(6px);
+          }
+
+          to {
+            opacity: 1;
+            transform: none;
+          }
+        }
+      </style>
+    </helmet>
+    <div style="max-width:680px; margin:0 auto; min-height:100vh; background:#fdf5ea; position:relative;">
+
+      <header style="padding:26px 20px 16px;">
+        <div style="font-size:11px; letter-spacing:.32em; text-transform:uppercase; color:#e05a2b; margin-bottom:8px;">
+          PJ's home - Carta dei drink</div>
+        <h1
+          style="font-family:'Cormorant Garamond',serif; font-weight:700; font-size:40px; line-height:.98; margin:0; color:#2a2018;">
+          Il Giro del Mondo<br>in un Bicchiere</h1>
+        <p style="margin:12px 0 0; color:#6b5a48; font-size:14.5px; line-height:1.5; max-width:42ch;">Distillati,
+          liquori e gin da ogni angolo d'Europa. Cerca, filtra e tocca un segnalino sulla mappa per scoprire da dove
+          arriva ogni drink.</p>
+      </header>
+
+      <div style="position:relative; z-index:600; background:#fdf5ea;">
+        <div
+          style="position:relative; height:38vh; min-height:230px; margin:0 12px; border-radius:14px; overflow:hidden; border:1px solid rgba(0,0,0,.08);">
+          <div id="drinkmap" style="position:absolute; inset:0;"></div>
+          <div
+            style="position:absolute; top:10px; right:12px; z-index:500; background:rgba(255,255,255,.92); backdrop-filter:blur(6px); padding:5px 11px; border-radius:999px; font-size:11.5px; color:#5c4d3f; letter-spacing:.04em; pointer-events:none; white-space:nowrap;">
+            {{ mapCount }}</div>
         </div>
-        <sc-for list="{{ filterGroups }}" as="fg" hint-placeholder-count="4">
-          <div style="margin-bottom:15px;">
-            <div style="font-size:10.5px; letter-spacing:.22em; text-transform:uppercase; color:#a98a63; margin-bottom:9px;">{{ fg.label }}</div>
-            <div style="display:flex; flex-wrap:wrap; gap:7px;">
-              <sc-for list="{{ fg.chips }}" as="chip" hint-placeholder-count="5">
-                <button onClick="{{ chip.onToggle }}" style="{{ chip.style }}">{{ chip.label }}</button>
-              </sc-for>
-            </div>
+        <div style="display:flex; gap:8px; padding:11px 12px 12px; align-items:center;">
+          <div style="position:relative; flex:1;">
+            <span
+              style="position:absolute; left:13px; top:50%; transform:translateY(-50%); color:#a98a63; font-size:15px;">⌕</span>
+            <input value="{{ searchText }}" onInput="{{ onSearch }}" placeholder="Cerca drink, ingrediente, luogo…"
+              style="width:100%; padding:12px 14px 12px 34px; background:#ffffff; border:1px solid rgba(0,0,0,.12); border-radius:11px; color:#3a2f26; font-size:14.5px;">
           </div>
-        </sc-for>
-      </div>
-    </sc-if>
-  </div>
+          <button onClick="{{ toggleFilters }}"
+            style="position:relative; padding:12px 15px; background:{{ filterBtnBg }}; color:{{ filterBtnColor }}; border:1px solid rgba(230,169,75,.35); border-radius:11px; font-size:13.5px; font-weight:600; cursor:pointer; white-space:nowrap;">Filtri{{
+            filterBadge }}</button>
+        </div>
 
-  <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ true }}">
-    <nav style="position:sticky; top:0; z-index:550; background:rgba(253,245,234,.9); backdrop-filter:blur(8px); border-bottom:1px solid rgba(0,0,0,.08);">
-      <div style="display:flex; flex-wrap:wrap; gap:8px; padding:11px 14px;">
-        <sc-for list="{{ catNav }}" as="cat" hint-placeholder-count="6">
-          <button onClick="{{ cat.onClick }}" style="padding:8px 14px; background:transparent; color:#4a3d31; border:1px solid rgba(0,0,0,.14); border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; transition:all .12s;" style-hover="background:#fff0e2; border-color:rgba(255,107,61,.4); color:#e05a2b;">{{ cat.label }}<span style="color:#a98a63; font-weight:500; margin-left:6px;">{{ cat.count }}</span></button>
-        </sc-for>
-      </div>
-    </nav>
-  </sc-if>
-
-  <sc-for list="{{ activeChips }}" as="a" hint-placeholder-count="0">
-    <div style="display:inline-flex;"></div>
-  </sc-for>
-
-  <main style="padding:10px 14px 60px;">
-    <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ true }}">
-      <div>
-        <sc-for list="{{ groups }}" as="group" hint-placeholder-count="3">
-          <section id="{{ group.anchor }}" style="margin-top:26px; scroll-margin-top:64px;">
-            <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid rgba(0,0,0,.09);">
-              <h2 style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:26px; margin:0; color:#2a2018;">{{ group.category }}</h2>
-              <span style="font-size:12px; color:#a98a63;">{{ group.count }}</span>
+        <sc-if value="{{ showFilters }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:2px 14px 16px; max-height:52vh; overflow-y:auto; animation:dmkfade .18s ease;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <span style="font-size:13px; color:#6b5a48;">{{ resultCount }}</span>
+              <button onClick="{{ clearAll }}"
+                style="background:none; border:none; color:#a07c52; font-size:12.5px; cursor:pointer; text-decoration:underline;">Azzera
+                filtri</button>
             </div>
-            <div style="display:flex; flex-direction:column; gap:16px;">
-              <sc-for list="{{ group.drinks }}" as="drink" hint-placeholder-count="4">
-                <article id="card-{{ drink.id }}" style="display:flex; align-items:stretch; background:#ffffff; border:1px solid rgba(0,0,0,.08); border-radius:15px; overflow:hidden; scroll-margin-top:16px; box-shadow:0 6px 20px rgba(120,80,40,.07);">
-                  <div style="position:relative; flex:0 0 158px; align-self:stretch; background:#f2ebe0;">
-                    <image-slot id="{{ drink.slotId }}" src="{{ drink.img }}" fit="contain" shape="rect" placeholder="{{ drink.slotHint }}"></image-slot>
-                    <div style="position:absolute; top:10px; left:10px; background:rgba(23,19,15,.8); backdrop-filter:blur(5px); padding:4px 10px; border-radius:999px; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:#ffb489; pointer-events:none;">{{ drink.strength }}</div>
-                    <div style="position:absolute; top:10px; right:10px; background:rgba(23,19,15,.8); backdrop-filter:blur(5px); padding:4px 10px; border-radius:999px; font-size:11.5px; color:#f0e6d8; pointer-events:none;">{{ drink.abvLabel }}</div>
-                  </div>
-                  <div style="flex:1 1 auto; min-width:0; padding:18px 20px 20px;">
-                    <h3 style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:25px; line-height:1.05; margin:0; color:#2a2018;">{{ drink.name }}</h3>
-                    <div style="display:flex; align-items:center; gap:6px; margin:7px 0 0; color:#7a6a56; font-size:13px;">
-                      <span style="color:#ff6b3d;">◉</span><span>{{ drink.place }}</span>
-                    </div>
-                    <div style="display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 0;">
-                      <sc-for list="{{ drink.tags }}" as="tag" hint-placeholder-count="3">
-                        <span style="font-size:11px; color:#7a5a3a; background:#fff0e2; border:1px solid rgba(0,0,0,.06); padding:3px 9px; border-radius:999px;">{{ tag }}</span>
-                      </sc-for>
-                    </div>
+            <sc-for list="{{ filterGroups }}" as="fg" hint-placeholder-count="4">
+              <div style="margin-bottom:15px;">
+                <div
+                  style="font-size:10.5px; letter-spacing:.22em; text-transform:uppercase; color:#a98a63; margin-bottom:9px;">
+                  {{ fg.label }}</div>
+                <div style="display:flex; flex-wrap:wrap; gap:7px;">
+                  <sc-for list="{{ fg.chips }}" as="chip" hint-placeholder-count="5">
+                    <button onClick="{{ chip.onToggle }}" style="{{ chip.style }}">{{ chip.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
 
-                    <sc-if value="{{ drink.expanded }}" hint-placeholder-val="{{ false }}">
-                      <div style="margin-top:14px; animation:dmkfade .2s ease;">
-                        <sc-for list="{{ drink.desc }}" as="para" hint-placeholder-count="2">
-                          <p style="margin:0 0 11px; color:#574a3d; font-size:14.5px; line-height:1.62;">{{ para }}</p>
-                        </sc-for>
-                        <sc-if value="{{ drink.link }}" hint-placeholder-val="{{ false }}">
-                          <a href="{{ drink.linkUrl }}" target="_blank" rel="noopener" style="display:inline-block; margin-top:2px; font-size:13.5px;">{{ drink.linkLabel }} ↗</a>
-                        </sc-if>
-                        <div style="margin-top:15px;">
-                          <button onClick="{{ drink.onShowMap }}" style="padding:9px 14px; background:none; border:1px solid rgba(255,107,61,.5); color:#e05a2b; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;">◉ Mostra sulla mappa</button>
-                        </div>
+      <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ true }}">
+        <nav
+          style="position:sticky; top:0; z-index:550; background:rgba(253,245,234,.9); backdrop-filter:blur(8px); border-bottom:1px solid rgba(0,0,0,.08);">
+          <div style="display:flex; flex-wrap:wrap; gap:8px; padding:11px 14px;">
+            <sc-for list="{{ catNav }}" as="cat" hint-placeholder-count="6">
+              <button onClick="{{ cat.onClick }}"
+                style="padding:8px 14px; background:transparent; color:#4a3d31; border:1px solid rgba(0,0,0,.14); border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; transition:all .12s;"
+                style-hover="background:#fff0e2; border-color:rgba(255,107,61,.4); color:#e05a2b;">{{ cat.label }}<span
+                  style="color:#a98a63; font-weight:500; margin-left:6px;">{{ cat.count }}</span></button>
+            </sc-for>
+          </div>
+        </nav>
+      </sc-if>
+
+      <sc-for list="{{ activeChips }}" as="a" hint-placeholder-count="0">
+        <div style="display:inline-flex;"></div>
+      </sc-for>
+
+      <main style="padding:10px 14px 60px;">
+        <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <sc-for list="{{ groups }}" as="group" hint-placeholder-count="3">
+              <section id="{{ group.anchor }}" style="margin-top:26px; scroll-margin-top:64px;">
+                <div
+                  style="display:flex; align-items:baseline; gap:10px; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid rgba(0,0,0,.09);">
+                  <h2
+                    style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:26px; margin:0; color:#2a2018;">
+                    {{ group.category }}</h2>
+                  <span style="font-size:12px; color:#a98a63;">{{ group.count }}</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:16px;">
+                  <sc-for list="{{ group.drinks }}" as="drink" hint-placeholder-count="4">
+                    <article id="card-{{ drink.id }}"
+                      style="display:flex; align-items:stretch; background:#ffffff; border:1px solid rgba(0,0,0,.08); border-radius:15px; overflow:hidden; scroll-margin-top:16px; box-shadow:0 6px 20px rgba(120,80,40,.07);">
+                      <div style="position:relative; flex:0 0 158px; align-self:stretch; background:#f2ebe0;">
+                        <image-slot id="{{ drink.slotId }}" src="{{ drink.img }}" fit="contain" shape="rect"
+                          placeholder="{{ drink.slotHint }}"></image-slot>
+                        <div
+                          style="position:absolute; top:10px; left:10px; background:rgba(23,19,15,.8); backdrop-filter:blur(5px); padding:4px 10px; border-radius:999px; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:#ffb489; pointer-events:none;">
+                          {{ drink.strength }}</div>
+                        <div
+                          style="position:absolute; top:10px; right:10px; background:rgba(23,19,15,.8); backdrop-filter:blur(5px); padding:4px 10px; border-radius:999px; font-size:11.5px; color:#f0e6d8; pointer-events:none;">
+                          {{ drink.abvLabel }}</div>
                       </div>
-                    </sc-if>
-                    <sc-if value="{{ drink.collapsed }}" hint-placeholder-val="{{ true }}">
-                      <p style="margin:14px 0 0; color:#574a3d; font-size:14.5px; line-height:1.6;">{{ drink.teaser }}</p>
-                      <p style="margin:10px 0 0; color:#6b5d4d; font-size:14px; line-height:1.58;">{{ drink.preview }}</p>
-                    </sc-if>
+                      <div style="flex:1 1 auto; min-width:0; padding:18px 20px 20px;">
+                        <h3
+                          style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:25px; line-height:1.05; margin:0; color:#2a2018;">
+                          {{ drink.name }}</h3>
+                        <div
+                          style="display:flex; align-items:center; gap:6px; margin:7px 0 0; color:#7a6a56; font-size:13px;">
+                          <span style="color:#ff6b3d;">◉</span><span>{{ drink.place }}</span>
+                        </div>
+                        <div style="display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 0;">
+                          <sc-for list="{{ drink.tags }}" as="tag" hint-placeholder-count="3">
+                            <span
+                              style="font-size:11px; color:#7a5a3a; background:#fff0e2; border:1px solid rgba(0,0,0,.06); padding:3px 9px; border-radius:999px;">{{
+                              tag }}</span>
+                          </sc-for>
+                        </div>
 
-                    <button onClick="{{ drink.onToggle }}" style="margin-top:13px; background:none; border:none; padding:0; color:#e05a2b; font-size:13px; font-weight:600; cursor:pointer; letter-spacing:.02em; white-space:nowrap;">{{ drink.toggleLabel }}</button>
-                  </div>
-                </article>
-              </sc-for>
-            </div>
-          </section>
-        </sc-for>
-      </div>
-    </sc-if>
-    <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
-      <div style="text-align:center; padding:70px 20px; color:#a98a63;">
-        <div style="font-size:40px; opacity:.5;">⌕</div>
-        <p style="margin:14px 0 4px; font-family:'Cormorant Garamond',serif; font-size:22px; color:#574a3d;">Nessun drink trovato</p>
-        <p style="margin:0 0 18px; font-size:14px;">Prova a modificare ricerca o filtri.</p>
-        <button onClick="{{ clearAll }}" style="padding:10px 18px; background:#ff6b3d; border:none; color:#ffffff; border-radius:10px; font-size:13.5px; font-weight:600; cursor:pointer;">Azzera tutto</button>
-      </div>
-    </sc-if>
-  </main>
+                        <sc-if value="{{ drink.expanded }}" hint-placeholder-val="{{ false }}">
+                          <div style="margin-top:14px; animation:dmkfade .2s ease;">
+                            <sc-for list="{{ drink.desc }}" as="para" hint-placeholder-count="2">
+                              <p style="margin:0 0 11px; color:#574a3d; font-size:14.5px; line-height:1.62;">{{ para }}
+                              </p>
+                            </sc-for>
+                            <sc-if value="{{ drink.link }}" hint-placeholder-val="{{ false }}">
+                              <a href="{{ drink.linkUrl }}" target="_blank" rel="noopener"
+                                style="display:inline-block; margin-top:2px; font-size:13.5px;">{{ drink.linkLabel }}
+                                ↗</a>
+                            </sc-if>
+                            <div style="margin-top:15px;">
+                              <button onClick="{{ drink.onShowMap }}"
+                                style="padding:9px 14px; background:none; border:1px solid rgba(255,107,61,.5); color:#e05a2b; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;">◉
+                                Mostra sulla mappa</button>
+                            </div>
+                          </div>
+                        </sc-if>
+                        <sc-if value="{{ drink.collapsed }}" hint-placeholder-val="{{ true }}">
+                          <p style="margin:14px 0 0; color:#574a3d; font-size:14.5px; line-height:1.6;">{{ drink.teaser
+                            }}</p>
+                          <p style="margin:10px 0 0; color:#6b5d4d; font-size:14px; line-height:1.58;">{{ drink.preview
+                            }}</p>
+                        </sc-if>
 
-  <footer style="padding:24px 20px 40px; border-top:1px solid rgba(0,0,0,.07); color:#a08a70; font-size:12px; text-align:center; line-height:1.7;">
-    Bevi responsabilmente · La carta è indicativa.<br>Segnalini mappa: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, tiles CARTO.
-  </footer>
-</div>
-</x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:420,&quot;height&quot;:900}}">
+                        <button onClick="{{ drink.onToggle }}"
+                          style="margin-top:13px; background:none; border:none; padding:0; color:#e05a2b; font-size:13px; font-weight:600; cursor:pointer; letter-spacing:.02em; white-space:nowrap;">{{
+                          drink.toggleLabel }}</button>
+                      </div>
+                    </article>
+                  </sc-for>
+                </div>
+              </section>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center; padding:70px 20px; color:#a98a63;">
+            <div style="font-size:40px; opacity:.5;">⌕</div>
+            <p style="margin:14px 0 4px; font-family:'Cormorant Garamond',serif; font-size:22px; color:#574a3d;">Nessun
+              drink trovato</p>
+            <p style="margin:0 0 18px; font-size:14px;">Prova a modificare ricerca o filtri.</p>
+            <button onClick="{{ clearAll }}"
+              style="padding:10px 18px; background:#ff6b3d; border:none; color:#ffffff; border-radius:10px; font-size:13.5px; font-weight:600; cursor:pointer;">Azzera
+              tutto</button>
+          </div>
+        </sc-if>
+      </main>
+
+      <footer
+        style="padding:24px 20px 40px; border-top:1px solid rgba(0,0,0,.07); color:#a08a70; font-size:12px; text-align:center; line-height:1.7;">
+        Bevi responsabilmente · La carta è indicativa.<br>Segnalini mappa: © <a
+          href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, tiles CARTO.
+      </footer>
+    </div>
+  </x-dc>
+  <script type="text/x-dc" data-dc-script
+    data-props="{&quot;$preview&quot;:{&quot;width&quot;:420,&quot;height&quot;:900}}">
 class Component extends DCLogic {
   state = { searchText: "", showFilters: false, expanded: {}, cats: {}, tags: {}, strengths: {}, regions: {}, visKey: "" };
 
   drinks = [
-    { id:"soplica-staropolska", name:"Soplica Staropolska", cat:"Vodka", abv:38, place:"Oborniki, Polonia", region:"Polonia", lat:52.6456, lng:16.8117, tags:["#vodka", "#invecchiata", "#morbida", "#dolce", "#speziata"], img:"https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Commandaria_St_John.jpg/640px-Commandaria_St_John.jpg",
+    { id:"soplica-staropolska", name:"Soplica Staropolska", cat:"Vodka", abv:38, place:"Oborniki, Polonia", region:"Polonia", lat:52.6456, lng:16.8117, tags:["#vodka", "#invecchiata", "#morbida", "#dolce", "#speziata"], img:"./images/soplica-staropolska.jpg",
       teaser:"La Soplica Staropolska (Antica Polacca) rappresenta l'apice della maestria distillatoria polacca.",
       preview:"Invecchiata a lungo in tradizionali botti di rovere, questa vodka acquisisce un colore ambrato profondo e una complessità aromatica sorprendente.",
       desc:["La Soplica Staropolska (Antica Polacca) rappresenta l'apice della maestria distillatoria polacca. Invecchiata a lungo in tradizionali botti di rovere, questa vodka acquisisce un colore ambrato profondo e una complessità aromatica sorprendente.", "Al naso sprigiona sentori ricchi di noci tostate, prugne secche e chiodi di garofano, mentre al palato risulta incredibilmente morbida e vellutata. È un omaggio alle antiche ricette della nobiltà polacca."],
       link:{label:"soplica.pl", url:"https://soplica.pl"} },
-    { id:"zubrowka", name:"Żubrówka", cat:"Vodka", abv:40, place:"Białystok, Polonia", region:"Polonia", lat:53.1325, lng:23.1688, tags:["#vodka", "#erbacea", "#secca", "#aromatica"], img:"https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Mirto_bianco.jpg/640px-Mirto_bianco.jpg",
+    { id:"zubrowka", name:"Żubrówka", cat:"Vodka", abv:40, place:"Białystok, Polonia", region:"Polonia", lat:53.1325, lng:23.1688, tags:["#vodka", "#erbacea", "#secca", "#aromatica"], img:"./images/zubrowka.jpg",
       teaser:"Conosciuta a livello mondiale come la 'vodka all'erba del bisonte', la Zubrowka è un distillato di segale unico nel suo genere.",
       preview:"Ogni bottiglia contiene un filo d'erba del bisonte (Hierochloe odorata) raccolta a mano nella foresta primordiale di Białowieża.",
       desc:["Conosciuta a livello mondiale come la 'vodka all'erba del bisonte', la Zubrowka è un distillato di segale unico nel suo genere. Ogni bottiglia contiene un filo d'erba del bisonte (Hierochloe odorata) raccolta a mano nella foresta primordiale di Białowieża.", "Questo elemento botanico conferisce al distillato un delicato colore paglierino e un profumo erbaceo inconfondibile, arricchito da note di vaniglia e mandorla."],
       link:{label:"zubrowka.com", url:"https://zubrowka.com"} },
-    { id:"soplica-nocciola", name:"Soplica Nocciola", cat:"Vodka", abv:28, place:"Oborniki, Polonia", region:"Polonia", lat:52.6456, lng:16.8117, tags:["#liquore", "#dolce", "#nocciola", "#morbido"], img:"https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Disaronno_Originale_bottle.jpg/640px-Disaronno_Originale_bottle.jpg",
+    { id:"soplica-nocciola", name:"Soplica Nocciola", cat:"Vodka", abv:28, place:"Oborniki, Polonia", region:"Polonia", lat:52.6456, lng:16.8117, tags:["#liquore", "#dolce", "#nocciola", "#morbido"], img:"./images/soplica-nocciola.jpg",
       teaser:"Un celebre liquore polacco a base di vodka pura aromatizzato alla nocciola.",
       preview:"Questo prodotto unisce la forza dell'alcol di alta qualità con la dolcezza avvolgente delle nocciole tostate.",
       desc:["Un celebre liquore polacco a base di vodka pura aromatizzato alla nocciola. Questo prodotto unisce la forza dell'alcol di alta qualità con la dolcezza avvolgente delle nocciole tostate.", "Al palato offre una consistenza cremosa e un sapore intenso che ricorda la crema di nocciole."],
@@ -281,10 +423,10 @@ class Component extends DCLogic {
       preview:"Presenta un equilibrio raffinato tra note erbacee amare e freschi sentori agrumati e floreali.",
       desc:["Piera è un amaro di nuova concezione, definito 'urbano' per il suo spirito moderno. Presenta un equilibrio raffinato tra note erbacee amare e freschi sentori agrumati e floreali.", "Al palato è scorrevole e profumato."],
       link:{label:"pieraamaro.it", url:"https://pieraamaro.it"} },
-    { id:"amaro-della-sardegna", name:"Mirto di Sardegna", cat:"Liquori e amari", abv:30, place:"Cagliari, Italia", region:"Italia", lat:39.2238, lng:9.1217, tags:["#amaro", "#balsamico", "#macchia-mediterranea", "#intenso"], img:"./images/amaro-della-sardegna.jpg",
-      teaser:"Racchiude la quintessenza botanica dell'isola sarda, integrando mirto, corbezzolo e finocchietto.",
-      preview:"Al naso è un'esplosione di macchia mediterranea.",
-      desc:["Racchiude la quintessenza botanica dell'isola sarda, integrando mirto, corbezzolo e finocchietto. Al naso è un'esplosione di macchia mediterranea.", "In bocca rivela una struttura robusta e un amaro legnoso."],
+    { id:"amaro-della-sardegna", name:"Amaro di Sardegna", cat:"Liquori e amari", abv:30, place:"Cagliari, Italia", region:"Italia", lat:39.2238, lng:9.1217, tags:["#amaro", "#balsamico", "#macchia-mediterranea", "#intenso"], img:"https://placehold.co/400x600/png?text=Amaro+di+Sardegna",
+      teaser:"",
+      preview:"",
+      desc:["L'Amaro di Sardegna è un liquore regionale prodotto in Sardegna da diverse aziende, spesso utilizzando la tradizionale tecnica di infusione a freddo delle erbe tipiche dell'isola. Sebbene le ricette varino, la base aromatica ruota attorno alle botaniche locali, tra cui spiccano il mirto, il corbezzolo, il finocchietto selvatico e la ginestra.", "Il risultato è un amaro dal colore scuro e limpido, con un bouquet olfattivo intenso che richiama la macchia mediterranea: note resinose, balsamiche e leggermente dolci. In bocca è robusto, persistente e caratterizzato da un amaro erbaceo che pulisce il palato."],
       link:{label:"sardegna.it", url:"https://sardegna.it"} },
     { id:"amaro-di-piperna", name:"Amaro alla Piperna", cat:"Liquori e amari", abv:30, place:"Ischia, Italia", region:"Italia", lat:40.7333, lng:13.95, tags:["#amaro", "#erbaceo", "#digestivo", "#mediterraneo"], img:"./images/amaro-di-piperna.jpg",
       teaser:"Autentica gemma dell'Isola d'Ischia.",
@@ -321,16 +463,16 @@ class Component extends DCLogic {
       preview:"Miscela alcolica dolce e robusta di anice, rum e brandy.",
       desc:["Ingrediente fondamentale per la 'Moretta fanese'. Miscela alcolica dolce e robusta di anice, rum e brandy.", "Pensato per essere riscaldato e mescolato al caffè espresso bollente per scaldare i marinai nei mesi invernali."],
       link:{label:"marche.it", url:"https://marche.it"} },
-    { id:"prugnolo-selvatico", name:"Prugnolino", cat:"Liquori e amari", abv:30, place:"Cantiano, Italia", region:"Italia", lat:43.4667, lng:12.6333, tags:["#liquore", "#fruttato", "#astringente", "#dolce-aspro"], img:"./images/prugnolo-selvatico.jpg",
-      teaser:"Elisir autunnale preparato con le bacche del prugnolo.",
-      preview:"Il profilo aromatico è intensamente fruttato, con sentori di prugna selvatica e frutti di bosco, bilanciato tra dolcezza e una piacevole asprezza tannica.",
-      desc:["Elisir autunnale preparato con le bacche del prugnolo.", "Il profilo aromatico è intensamente fruttato, con sentori di prugna selvatica e frutti di bosco, bilanciato tra dolcezza e una piacevole asprezza tannica."],
+    { id:"prugnolo-selvatico", name:"Prugnolo Selvatico", cat:"Liquori e amari", abv:24, place:"Tivoli, Italia", region:"Italia", lat:41.96, lng:12.7981, tags:["#liquore", "#fruttato", "#astringente", "#artigianale"], img:"./images/prugnolo-selvatico.jpg",
+      teaser:"Liquore artigianale fatto dai genitori di Paolo a Tivoli, preparato con le bacche del prugnolo selvatico.",
+      preview:"Le bacche di Prunus spinosa, raccolte dopo i primi freddi per mitigarne la forte astringenza, donano un liquore dal sapore fruttato e aspro.",
+      desc:["Liquore artigianale fatto dai genitori di Paolo a Tivoli, preparato con le bacche del prugnolo selvatico.", "Il Prunus spinosa produce drupe aspre e allappanti che, messe in infusione, rilasciano un profilo intensamente fruttato. Emergono note di prugna selvatica, frutti di bosco e leggeri sentori mandorlati derivanti dal nocciolo, bilanciati tra dolcezza e la caratteristica asprezza tannica della pianta."],
       link:{label:"liquoriartigianali.it", url:"https://liquoriartigianali.it"} },
-    { id:"ciardon", name:"Ciardon Bordiga", cat:"Liquori e amari", abv:30, place:"Cuneo, Italia", region:"Italia", lat:44.3841, lng:7.5426, tags:["#liquore", "#vegetale", "#amaro", "#terroso"], img:"./images/ciardon.jpg",
-      teaser:"Raro liquore alpino realizzato dai cardi selvatici.",
-      preview:"L'aroma ricorda il carciofo crudo e l'erba bagnata.",
-      desc:["Raro liquore alpino realizzato dai cardi selvatici. L'aroma ricorda il carciofo crudo e l'erba bagnata.", "In bocca si rivela decisamente amaro, astringente e terroso. Digestivo funzionale di montagna."],
-      link:{label:"prodottilocali.it", url:"https://prodottilocali.it"} },
+    { id:"ciardon", name:"Amaro Ciardon", cat:"Liquori e amari", abv:36, place:"Châtillon, Italia", region:"Italia", lat:45.75, lng:7.6167, tags:["#amaro", "#alpino", "#cardo", "#vegetale"], img:"./images/ciardon.jpg",
+      teaser:"Amaro valdostano ottenuto dall'infusione di radici ed erbe officinali alpine, tra cui il cardo mariano ('ciardon').",
+      preview:"Presenta un'elevata amarezza, basso contenuto di zuccheri e un profilo aromatico intenso.",
+      desc:["Amaro valdostano ottenuto dall'infusione di radici ed erbe officinali alpine, tra cui spicca il cardo mariano, in dialetto valdostano 'ciardon'.", "Il prodotto ha elevata amarezza, importante grado alcolico e basso contenuto di zuccheri. Aroma intenso con spunti agrumati e amaricanti, per un gusto complessivamente gentile ed aromatico."],
+      link:{label:"vertosan.com", url:"https://www.vertosan.com/vertosan/amaro-ciardon/"} },
     { id:"china-riccardi", name:"China Riccardi", cat:"Liquori e amari", abv:30, place:"Tivoli, Italia", region:"Italia", lat:41.96, lng:12.7981, tags:["#amaro", "#speziato", "#tonico", "#complesso"], img:"./images/china-riccardi.jpg",
       teaser:"Storico elisir nato a Tivoli nel 1918.",
       preview:"Sfrutta le proprietà tonico-digestive dell'estratto di corteccia di China Calissaia.",
@@ -376,15 +518,15 @@ class Component extends DCLogic {
       preview:"Maturato esclusivamente in botti ex-bourbon pesantemente carbonizzate.",
       desc:["Edizione limitata leggendaria. Maturato esclusivamente in botti ex-bourbon pesantemente carbonizzate.", "Al naso colpisce con vampate di fumo denso, resina bruciata e carne alla brace. Palato di liquirizia nera e toffee."],
       link:{label:"whiskyitaly.it", url:"https://whiskyitaly.it"} },
-    { id:"ardbeg-eureka", name:"Ardbeg Hypernova", cat:"Scotch whisky", abv:46, place:"Port Ellen, Regno Unito", region:"Regno Unito", lat:55.6281, lng:-6.1897, tags:["#whisky", "#torbato", "#complesso", "#sperimentale"], img:"./images/ardbeg-eureka.jpg",
-      teaser:"Release speciale stravagante.",
-      preview:"Un esperimento che gioca sui confini del profilo classico Ardbeg.",
-      desc:["Release speciale stravagante. Un esperimento che gioca sui confini del profilo classico Ardbeg.", "Si distingue per una maturazione in legni non convenzionali che apportano note agrumate e mentolate che si fondono con la torba."],
+    { id:"ardbeg-eureka", name:"Ardbeg Eureka", cat:"Scotch whisky", abv:52.2, place:"Port Ellen, Regno Unito", region:"Regno Unito", lat:55.6281, lng:-6.1897, tags:["#whisky", "#torbato", "#sherry", "#sperimentale"], img:"./images/ardbeg-eureka.jpg",
+      teaser:"Rilascio speciale per il 25° anniversario dell'Ardbeg Committee.",
+      preview:"Nato da un esperimento segreto, unisce spiriti maturati in botti ex-PX e malti tostati.",
+      desc:["Rilascio speciale per il 25° anniversario dell'Ardbeg Committee. Nato da un esperimento segreto ('Operation Smokescreen'), unisce spiriti maturati in botti ex-PX e malti tostati.", "Al naso offre mela rossa, ciliegie e fumo denso. Al palato esplode con caffè, toffee alle noci e frutta scura."],
       link:{label:"ardbeg.com", url:"https://ardbeg.com"} },
-    { id:"ardbeg-smokiverse", name:"Ardbeg Wee Beastie", cat:"Scotch whisky", abv:46, place:"Port Ellen, Regno Unito", region:"Regno Unito", lat:55.6281, lng:-6.1897, tags:["#whisky", "#torbato", "#marittimo", "#intenso"], img:"./images/ardbeg-smokiverse.jpg",
-      teaser:"Un'esperienza degustativa che esplora le dimensioni della torbatura scozzese.",
-      preview:"Al naso si viene investiti da sentori marittimi: alghe essiccate, iodio e salsedine.",
-      desc:["Un'esperienza degustativa che esplora le dimensioni della torbatura scozzese. Al naso si viene investiti da sentori marittimi: alghe essiccate, iodio e salsedine.", "Palato corposo, bilanciato da agrumi canditi."],
+    { id:"ardbeg-smokiverse", name:"Ardbeg Smokiverse", cat:"Scotch whisky", abv:48.3, place:"Port Ellen, Regno Unito", region:"Regno Unito", lat:55.6281, lng:-6.1897, tags:["#whisky", "#torbato", "#tropicale", "#innovativo"], img:"./images/ardbeg-smokiverse.jpg",
+      teaser:"L'edizione limitata Ardbeg Day 2025, prodotta con un innovativo 'high-gravity mash'.",
+      preview:"Spiccano note vibranti di frutta tropicale e 'bubblegum affumicato'.",
+      desc:["L'edizione limitata Ardbeg Day 2025, prodotta con un innovativo 'high-gravity mash' che aumenta gli esteri.", "Spiccano note vibranti di frutta tropicale e 'bubblegum affumicato', bilanciate dal classico e potente fumo di Ardbeg."],
       link:{label:"ardbeg.com", url:"https://ardbeg.com"} },
     { id:"ardbeg-traigh-bhan-batch-3", name:"Ardbeg Traigh Bhan Batch 3", cat:"Scotch whisky", abv:46.2, place:"Port Ellen, Regno Unito", region:"Regno Unito", lat:55.6281, lng:-6.1897, tags:["#whisky", "#torbato", "#invecchiato", "#rotondo"], img:"./images/ardbeg-traigh-bhan-batch-3.jpg",
       teaser:"Raro Single Malt invecchiato 19 anni.",
@@ -396,7 +538,7 @@ class Component extends DCLogic {
       preview:"Invecchiato 11 anni e imbottigliato 'cask strength'.",
       desc:["Raffinato imbottigliamento indipendente dalla distilleria Dufftown. Invecchiato 11 anni e imbottigliato 'cask strength'.", "Un'esplosione floreale e fruttata, tipica dello Speyside: mele verdi, pera ed erba appena tagliata."],
       link:{label:"adrattray.com", url:"https://adrattray.com"} },
-    { id:"machrie-noir-peated-lochranza-malt", name:"Machrie Moor Peated Arran", cat:"Scotch whisky", abv:46, place:"Lochranza, Regno Unito", region:"Regno Unito", lat:55.7069, lng:-5.2969, tags:["#whisky", "#torbato", "#agrumato", "#fresco"], img:"./images/machrie-noir-peated-lochranza-malt.jpg",
+    { id:"machrie-noir-peated-lochranza-malt", name:"Peated Lochranza Malt", cat:"Scotch whisky", abv:46, place:"Lochranza, Regno Unito", region:"Regno Unito", lat:55.7069, lng:-5.2969, tags:["#whisky", "#torbato", "#agrumato", "#fresco"], img:"./images/machrie-noir-peated-lochranza-malt.jpg",
       teaser:"L'affascinante versione torbata prodotta dalla distilleria di Lochranza sull'Isola di Arran.",
       preview:"Il tipico frutteto isolano si incontra con un fumo terroso.",
       desc:["L'affascinante versione torbata prodotta dalla distilleria di Lochranza sull'Isola di Arran. Il tipico frutteto isolano si incontra con un fumo terroso.", "Un single malt fresco e accessibile."],
@@ -411,11 +553,11 @@ class Component extends DCLogic {
       preview:"Maturato in botti di sherry.",
       desc:["Whisky non torbato, rispettando la tradizione storica di Bunnahabhain. Maturato in botti di sherry.", "Profumi inebrianti di uvetta, fichi, noci tostate e salsedine marina. Palato corposo e decadente di torta di frutta."],
       link:{label:"bunnahabhain.com", url:"https://bunnahabhain.com"} },
-    { id:"cadenhead-s-1842-peated", name:"Cadenhead's 1842", cat:"Scotch whisky", abv:46, place:"Campbeltown, Regno Unito", region:"Regno Unito", lat:55.4256, lng:-5.6058, tags:["#whisky", "#blend", "#torbato", "#marino"], img:"./images/cadenhead-s-1842-peated.jpg",
-      teaser:"Eccellente blend torbato ideato dai maestri di Cadenhead's.",
-      preview:"Miscela di single malt molto torbati con pregiati whisky di grano.",
-      desc:["Eccellente blend torbato ideato dai maestri di Cadenhead's. Miscela di single malt molto torbati con pregiati whisky di grano.", "L'attacco è salmastro, addolcito dalle note maltate e di caramello del grain whisky."],
-      link:{label:"cadenhead.scot", url:"https://cadenhead.scot"} },
+    { id:"cadenheads-1842-ca", name:"Cadenheads 1842 CA", cat:"Scotch whisky", abv:57.4, place:"Campbeltown, Regno Unito", region:"Regno Unito", lat:55.4256, lng:-5.6058, tags:["#whisky", "#blendedmalt", "#torbato", "#caskstrength"], img:"./images/cadenheads-1842-ca.jpg",
+      teaser:"Un eccellente blended malt torbato, imbottigliato da Cadenhead's a gradazione piena.",
+      preview:"Composto esclusivamente da single malt scozzesi, senza aggiunta di grain whisky.",
+      desc:["Un eccellente blended malt torbato, imbottigliato da Cadenhead's a gradazione piena (57.4%).", "Trattandosi di un blended malt, è composto esclusivamente da pregiati single malt scozzesi. Unisce la forza della torba con una ricchezza straordinaria."],
+      link:{label:"whiskybase.com", url:"https://www.whiskybase.com/whiskies/whisky/276416/cadenheads-1842-ca"} },
     { id:"holyrood-new-make", name:"Holyrood New Make", cat:"Scotch whisky", abv:60, place:"Edimburgo, Regno Unito", region:"Regno Unito", lat:55.9533, lng:-3.1883, tags:["#distillato", "#forte", "#puro", "#fruttato"], img:"./images/holyrood-new-make.jpg",
       teaser:"Distillato appena uscito dagli alambicchi della Holyrood di Edimburgo, prima di toccare il legno.",
       preview:"Cristallino e potente, sprigiona l'anima cruda del malto e dei lieviti con note pungenti ed estremamente fruttate.",
@@ -615,4 +757,5 @@ class Component extends DCLogic {
 }
 </script>
 </body>
+
 </html>
