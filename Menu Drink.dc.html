@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="./image-slot.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fdf5ea; }
+  body { font-family: 'Work Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; color: #3a2f26; }
+  a { color: #e05a2b; text-decoration: none; border-bottom: 1px solid rgba(224,90,43,.35); }
+  a:hover { color: #e05a2b; border-bottom-color: rgba(255,138,102,.7); }
+  ::selection { background: rgba(230,169,75,.3); }
+  .leaflet-container { background: #d7e3e6; font-family: 'Work Sans', sans-serif; }
+  .leaflet-popup-content-wrapper { background: #ffffff; color: #3a2f26; border-radius: 10px; box-shadow: 0 12px 30px rgba(120,80,40,.22); }
+  .leaflet-popup-tip { background: #ffffff; }
+  .leaflet-popup-content { margin: 12px 14px; font-family: 'Work Sans', sans-serif; }
+  .leaflet-control-zoom a { background: #ffffff; color: #3a2f26; border-color: rgba(0,0,0,.1); }
+  .leaflet-control-zoom a:hover { background: #fff0e2; }
+  .leaflet-bar { border: none; box-shadow: 0 4px 14px rgba(120,80,40,.2); }
+  .dmk-pin { display:flex; align-items:center; justify-content:center; }
+  .dmk-pin span { width:15px; height:15px; border-radius:50%; background:#ff6b3d; border:2.5px solid #ffffff; box-shadow:0 0 0 2px rgba(255,107,61,.4), 0 3px 8px rgba(120,80,40,.35); transition: transform .15s; }
+  .dmk-pin.on span { background:#12b5a5; }
+  input, button { font-family: inherit; }
+  input:focus { outline: none; }
+  @keyframes dmkfade { from { opacity:0; transform: translateY(6px);} to {opacity:1; transform:none;} }
+</style>
+</helmet>
+<div style="max-width:680px; margin:0 auto; min-height:100vh; background:#fdf5ea; position:relative;">
+
+  <header style="padding:26px 20px 16px;">
+    <div style="font-size:11px; letter-spacing:.32em; text-transform:uppercase; color:#e05a2b; margin-bottom:8px;">Carta dei drink · Edizione mondiale</div>
+    <h1 style="font-family:'Cormorant Garamond',serif; font-weight:700; font-size:40px; line-height:.98; margin:0; color:#2a2018;">Il Giro del Mondo<br>in un Bicchiere</h1>
+    <p style="margin:12px 0 0; color:#6b5a48; font-size:14.5px; line-height:1.5; max-width:42ch;">Cocktail, distillati e sorsi da ogni angolo del pianeta. Cerca, filtra e tocca un segnalino sulla mappa per scoprire da dove arriva ogni drink.</p>
+  </header>
+
+  <div style="position:relative; z-index:600; background:#fdf5ea;">
+    <div style="position:relative; height:38vh; min-height:230px; margin:0 12px; border-radius:14px; overflow:hidden; border:1px solid rgba(0,0,0,.08);">
+      <div id="drinkmap" style="position:absolute; inset:0;"></div>
+      <div style="position:absolute; top:10px; right:12px; z-index:500; background:rgba(255,255,255,.92); backdrop-filter:blur(6px); padding:5px 11px; border-radius:999px; font-size:11.5px; color:#5c4d3f; letter-spacing:.04em; pointer-events:none; white-space:nowrap;">{{ mapCount }}</div>
+    </div>
+    <div style="display:flex; gap:8px; padding:11px 12px 12px; align-items:center;">
+      <div style="position:relative; flex:1;">
+        <span style="position:absolute; left:13px; top:50%; transform:translateY(-50%); color:#a98a63; font-size:15px;">⌕</span>
+        <input value="{{ searchText }}" onInput="{{ onSearch }}" placeholder="Cerca drink, ingrediente, luogo…" style="width:100%; padding:12px 14px 12px 34px; background:#ffffff; border:1px solid rgba(0,0,0,.12); border-radius:11px; color:#3a2f26; font-size:14.5px;">
+      </div>
+      <button onClick="{{ toggleFilters }}" style="position:relative; padding:12px 15px; background:{{ filterBtnBg }}; color:{{ filterBtnColor }}; border:1px solid rgba(230,169,75,.35); border-radius:11px; font-size:13.5px; font-weight:600; cursor:pointer; white-space:nowrap;">Filtri{{ filterBadge }}</button>
+    </div>
+
+    <sc-if value="{{ showFilters }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:2px 14px 16px; max-height:52vh; overflow-y:auto; animation:dmkfade .18s ease;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <span style="font-size:13px; color:#6b5a48;">{{ resultCount }}</span>
+          <button onClick="{{ clearAll }}" style="background:none; border:none; color:#a07c52; font-size:12.5px; cursor:pointer; text-decoration:underline;">Azzera filtri</button>
+        </div>
+        <sc-for list="{{ filterGroups }}" as="fg" hint-placeholder-count="4">
+          <div style="margin-bottom:15px;">
+            <div style="font-size:10.5px; letter-spacing:.22em; text-transform:uppercase; color:#a98a63; margin-bottom:9px;">{{ fg.label }}</div>
+            <div style="display:flex; flex-wrap:wrap; gap:7px;">
+              <sc-for list="{{ fg.chips }}" as="chip" hint-placeholder-count="5">
+                <button onClick="{{ chip.onToggle }}" style="{{ chip.style }}">{{ chip.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ true }}">
+    <nav style="position:sticky; top:0; z-index:550; background:rgba(253,245,234,.9); backdrop-filter:blur(8px); border-bottom:1px solid rgba(0,0,0,.08);">
+      <div style="display:flex; flex-wrap:wrap; gap:8px; padding:11px 14px;">
+        <sc-for list="{{ catNav }}" as="cat" hint-placeholder-count="6">
+          <button onClick="{{ cat.onClick }}" style="padding:8px 14px; background:transparent; color:#4a3d31; border:1px solid rgba(0,0,0,.14); border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; transition:all .12s;" style-hover="background:#fff0e2; border-color:rgba(255,107,61,.4); color:#e05a2b;">{{ cat.label }}<span style="color:#a98a63; font-weight:500; margin-left:6px;">{{ cat.count }}</span></button>
+        </sc-for>
+      </div>
+    </nav>
+  </sc-if>
+
+  <sc-for list="{{ activeChips }}" as="a" hint-placeholder-count="0">
+    <div style="display:inline-flex;"></div>
+  </sc-for>
+
+  <main style="padding:10px 14px 60px;">
+    <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <sc-for list="{{ groups }}" as="group" hint-placeholder-count="3">
+          <section id="{{ group.anchor }}" style="margin-top:26px; scroll-margin-top:64px;">
+            <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid rgba(0,0,0,.09);">
+              <h2 style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:26px; margin:0; color:#2a2018;">{{ group.category }}</h2>
+              <span style="font-size:12px; color:#a98a63;">{{ group.count }}</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:16px;">
+              <sc-for list="{{ group.drinks }}" as="drink" hint-placeholder-count="4">
+                <article id="card-{{ drink.id }}" style="display:flex; align-items:stretch; background:#ffffff; border:1px solid rgba(0,0,0,.08); border-radius:15px; overflow:hidden; scroll-margin-top:16px; box-shadow:0 6px 20px rgba(120,80,40,.07);">
+                  <div style="position:relative; flex:0 0 158px; align-self:stretch; background:#f2ebe0;">
+                    <image-slot id="{{ drink.slotId }}" src="{{ drink.img }}" fit="contain" shape="rect" placeholder="{{ drink.slotHint }}"></image-slot>
+                    <div style="position:absolute; top:10px; left:10px; background:rgba(23,19,15,.8); backdrop-filter:blur(5px); padding:4px 10px; border-radius:999px; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:#ffb489; pointer-events:none;">{{ drink.strength }}</div>
+                    <div style="position:absolute; top:10px; right:10px; background:rgba(23,19,15,.8); backdrop-filter:blur(5px); padding:4px 10px; border-radius:999px; font-size:11.5px; color:#f0e6d8; pointer-events:none;">{{ drink.abvLabel }}</div>
+                  </div>
+                  <div style="flex:1 1 auto; min-width:0; padding:18px 20px 20px;">
+                    <h3 style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:25px; line-height:1.05; margin:0; color:#2a2018;">{{ drink.name }}</h3>
+                    <div style="display:flex; align-items:center; gap:6px; margin:7px 0 0; color:#7a6a56; font-size:13px;">
+                      <span style="color:#ff6b3d;">◉</span><span>{{ drink.place }}</span>
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 0;">
+                      <sc-for list="{{ drink.tags }}" as="tag" hint-placeholder-count="3">
+                        <span style="font-size:11px; color:#7a5a3a; background:#fff0e2; border:1px solid rgba(0,0,0,.06); padding:3px 9px; border-radius:999px;">{{ tag }}</span>
+                      </sc-for>
+                    </div>
+
+                    <sc-if value="{{ drink.expanded }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-top:14px; animation:dmkfade .2s ease;">
+                        <sc-for list="{{ drink.desc }}" as="para" hint-placeholder-count="2">
+                          <p style="margin:0 0 11px; color:#574a3d; font-size:14.5px; line-height:1.62;">{{ para }}</p>
+                        </sc-for>
+                        <sc-if value="{{ drink.link }}" hint-placeholder-val="{{ false }}">
+                          <a href="{{ drink.linkUrl }}" target="_blank" rel="noopener" style="display:inline-block; margin-top:2px; font-size:13.5px;">{{ drink.linkLabel }} ↗</a>
+                        </sc-if>
+                        <div style="margin-top:15px;">
+                          <button onClick="{{ drink.onShowMap }}" style="padding:9px 14px; background:none; border:1px solid rgba(255,107,61,.5); color:#e05a2b; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;">◉ Mostra sulla mappa</button>
+                        </div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ drink.collapsed }}" hint-placeholder-val="{{ true }}">
+                      <p style="margin:14px 0 0; color:#574a3d; font-size:14.5px; line-height:1.6;">{{ drink.teaser }}</p>
+                      <p style="margin:10px 0 0; color:#6b5d4d; font-size:14px; line-height:1.58;">{{ drink.preview }}</p>
+                    </sc-if>
+
+                    <button onClick="{{ drink.onToggle }}" style="margin-top:13px; background:none; border:none; padding:0; color:#e05a2b; font-size:13px; font-weight:600; cursor:pointer; letter-spacing:.02em; white-space:nowrap;">{{ drink.toggleLabel }}</button>
+                  </div>
+                </article>
+              </sc-for>
+            </div>
+          </section>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+      <div style="text-align:center; padding:70px 20px; color:#a98a63;">
+        <div style="font-size:40px; opacity:.5;">⌕</div>
+        <p style="margin:14px 0 4px; font-family:'Cormorant Garamond',serif; font-size:22px; color:#574a3d;">Nessun drink trovato</p>
+        <p style="margin:0 0 18px; font-size:14px;">Prova a modificare ricerca o filtri.</p>
+        <button onClick="{{ clearAll }}" style="padding:10px 18px; background:#ff6b3d; border:none; color:#ffffff; border-radius:10px; font-size:13.5px; font-weight:600; cursor:pointer;">Azzera tutto</button>
+      </div>
+    </sc-if>
+  </main>
+
+  <footer style="padding:24px 20px 40px; border-top:1px solid rgba(0,0,0,.07); color:#a08a70; font-size:12px; text-align:center; line-height:1.7;">
+    Bevi responsabilmente · La carta è indicativa.<br>Segnalini mappa: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, tiles CARTO.
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:420,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { searchText: "", showFilters: false, expanded: {}, cats: {}, tags: {}, strengths: {}, regions: {}, visKey: "" };
+
+  drinks = [
+    { id:"soplica-staropolska", name:"Soplica Staropolska", cat:"Vodka", abv:38, place:"Oborniki, Polonia", region:"Polonia", lat:52.6456, lng:16.8117, tags:["#vodka", "#invecchiata", "#morbida", "#dolce", "#speziata"], img:"https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Commandaria_St_John.jpg/640px-Commandaria_St_John.jpg",
+      teaser:"La Soplica Staropolska (Antica Polacca) rappresenta l'apice della maestria distillatoria polacca.",
+      preview:"Invecchiata a lungo in tradizionali botti di rovere, questa vodka acquisisce un colore ambrato profondo e una complessità aromatica sorprendente.",
+      desc:["La Soplica Staropolska (Antica Polacca) rappresenta l'apice della maestria distillatoria polacca. Invecchiata a lungo in tradizionali botti di rovere, questa vodka acquisisce un colore ambrato profondo e una complessità aromatica sorprendente.", "Al naso sprigiona sentori ricchi di noci tostate, prugne secche e chiodi di garofano, mentre al palato risulta incredibilmente morbida e vellutata. È un omaggio alle antiche ricette della nobiltà polacca."],
+      link:{label:"soplica.pl", url:"https://soplica.pl"} },
+    { id:"zubrowka", name:"Żubrówka", cat:"Vodka", abv:40, place:"Białystok, Polonia", region:"Polonia", lat:53.1325, lng:23.1688, tags:["#vodka", "#erbacea", "#secca", "#aromatica"], img:"https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Mirto_bianco.jpg/640px-Mirto_bianco.jpg",
+      teaser:"Conosciuta a livello mondiale come la 'vodka all'erba del bisonte', la Zubrowka è un distillato di segale unico nel suo genere.",
+      preview:"Ogni bottiglia contiene un filo d'erba del bisonte (Hierochloe odorata) raccolta a mano nella foresta primordiale di Białowieża.",
+      desc:["Conosciuta a livello mondiale come la 'vodka all'erba del bisonte', la Zubrowka è un distillato di segale unico nel suo genere. Ogni bottiglia contiene un filo d'erba del bisonte (Hierochloe odorata) raccolta a mano nella foresta primordiale di Białowieża.", "Questo elemento botanico conferisce al distillato un delicato colore paglierino e un profumo erbaceo inconfondibile, arricchito da note di vaniglia e mandorla."],
+      link:{label:"zubrowka.com", url:"https://zubrowka.com"} },
+    { id:"soplica-nocciola", name:"Soplica Nocciola", cat:"Vodka", abv:28, place:"Oborniki, Polonia", region:"Polonia", lat:52.6456, lng:16.8117, tags:["#liquore", "#dolce", "#nocciola", "#morbido"], img:"https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Disaronno_Originale_bottle.jpg/640px-Disaronno_Originale_bottle.jpg",
+      teaser:"Un celebre liquore polacco a base di vodka pura aromatizzato alla nocciola.",
+      preview:"Questo prodotto unisce la forza dell'alcol di alta qualità con la dolcezza avvolgente delle nocciole tostate.",
+      desc:["Un celebre liquore polacco a base di vodka pura aromatizzato alla nocciola. Questo prodotto unisce la forza dell'alcol di alta qualità con la dolcezza avvolgente delle nocciole tostate.", "Al palato offre una consistenza cremosa e un sapore intenso che ricorda la crema di nocciole."],
+      link:{label:"soplica.pl", url:"https://soplica.pl"} },
+    { id:"lubelska-pompelmo", name:"Lubelska Pompelmo", cat:"Vodka", abv:28, place:"Lublino, Polonia", region:"Polonia", lat:51.2465, lng:22.5684, tags:["#liquore", "#agrumato", "#fresco", "#aspro"], img:"./images/lubelska-pompelmo.jpg",
+      teaser:"La Lubelska al pompelmo è una vodka aromatizzata estremamente popolare nell'Europa dell'Est.",
+      preview:"Si distingue per il suo perfetto equilibrio tra la dolcezza naturale e l'acidità tipica del pompelmo rosa.",
+      desc:["La Lubelska al pompelmo è una vodka aromatizzata estremamente popolare nell'Europa dell'Est. Si distingue per il suo perfetto equilibrio tra la dolcezza naturale e l'acidità tipica del pompelmo rosa.", "Al naso risulta vivace e succosa, mentre in bocca offre un'immediata sensazione di freschezza agrumata."],
+      link:{label:"stockspirits.com", url:"https://stockspirits.com"} },
+    { id:"bulbash-ossicocco", name:"Bulbash Cranberry", cat:"Vodka", abv:40, place:"Zaslavl, Bielorussia", region:"Bielorussia", lat:54.0033, lng:27.2789, tags:["#vodka", "#fruttata", "#asprigna", "#secca"], img:"./images/bulbash-ossicocco.jpg",
+      teaser:"Proveniente dalla Bielorussia, questa vodka è infusa artigianalmente con ossicocco (mirtillo rosso palustre).",
+      preview:"La base alcolica di altissima purezza viene arricchita dai succhi naturali e dagli estratti della bacca, che donano al liquido un colore rubino brillante.",
+      desc:["Proveniente dalla Bielorussia, questa vodka è infusa artigianalmente con ossicocco (mirtillo rosso palustre). La base alcolica di altissima purezza viene arricchita dai succhi naturali e dagli estratti della bacca, che donano al liquido un colore rubino brillante.", "Il profilo gustativo è caratterizzato da una marcata nota asprigna e fruttata."],
+      link:{label:"bulbash.com", url:"https://bulbash.com"} },
+    { id:"bulbash-miele-e-peperoncino", name:"Bulbash Honey & Pepper", cat:"Vodka", abv:40, place:"Zaslavl, Bielorussia", region:"Bielorussia", lat:54.0033, lng:27.2789, tags:["#vodka", "#speziata", "#piccante", "#calda"], img:"./images/bulbash-miele-e-peperoncino.jpg",
+      teaser:"Una combinazione audace e tradizionale che gioca sul contrasto tra dolcezza e piccantezza.",
+      preview:"Questa vodka bielorussa incorpora miele naturale e infuso di vero peperoncino piccante.",
+      desc:["Una combinazione audace e tradizionale che gioca sul contrasto tra dolcezza e piccantezza. Questa vodka bielorussa incorpora miele naturale e infuso di vero peperoncino piccante.", "Al primo sorso, la morbidezza vellutata del miele accarezza il palato, seguita dalla spinta pungente del peperoncino."],
+      link:{label:"bulbash.com", url:"https://bulbash.com"} },
+    { id:"bulbash-tiglio-e-miele", name:"Bulbash Linden Honey", cat:"Vodka", abv:40, place:"Zaslavl, Bielorussia", region:"Bielorussia", lat:54.0033, lng:27.2789, tags:["#vodka", "#floreale", "#morbida", "#dolce"], img:"./images/bulbash-tiglio-e-miele.jpg",
+      teaser:"Una vodka dal profilo delicato, floreale e rilassante.",
+      preview:"La ricetta prevede l'uso di estratti naturali di fiori di tiglio raccolti a mano, dolcificati con miele di campo.",
+      desc:["Una vodka dal profilo delicato, floreale e rilassante. La ricetta prevede l'uso di estratti naturali di fiori di tiglio raccolti a mano, dolcificati con miele di campo.", "Al naso esprime profumi eterei, quasi erboristici. Al palato risulta rotonda, setosa e leggermente dolce."],
+      link:{label:"bulbash.com", url:"https://bulbash.com"} },
+    { id:"nepeta-sicilia", name:"Amaro Nepeta", cat:"Liquori e amari", abv:28, place:"Siracusa, Italia", region:"Italia", lat:37.0755, lng:15.2866, tags:["#amaro", "#balsamico", "#agrumato", "#fresco"], img:"./images/nepeta-sicilia.jpg",
+      teaser:"Nepeta è un amaro siciliano artigianale che cattura l'essenza dell'isola.",
+      preview:"L'ingrediente principe è la Nepitella, una mentuccia selvatica tipica degli Iblei, unita a scorze di Limone di Siracusa IGP.",
+      desc:["Nepeta è un amaro siciliano artigianale che cattura l'essenza dell'isola. L'ingrediente principe è la Nepitella, una mentuccia selvatica tipica degli Iblei, unita a scorze di Limone di Siracusa IGP.", "Il risultato è un amaro fresco, con un potente ingresso balsamico ed erbaceo."],
+      link:{label:"nepeta.it", url:"https://nepeta.it"} },
+    { id:"amaro-herbae-sicilia", name:"Amaro Herbae", cat:"Liquori e amari", abv:30, place:"Palermo, Italia", region:"Italia", lat:38.1157, lng:13.3615, tags:["#amaro", "#erbaceo", "#mediterraneo", "#digestivo"], img:"./images/amaro-herbae-sicilia.jpg",
+      teaser:"Prodotto artigianalmente in Sicilia, l'Amaro Herbae è un concentrato di macchia mediterranea.",
+      preview:"Viene realizzato attraverso la lenta macerazione a freddo di una complessa miscela di erbe officinali, radici e spezie locali.",
+      desc:["Prodotto artigianalmente in Sicilia, l'Amaro Herbae è un concentrato di macchia mediterranea. Viene realizzato attraverso la lenta macerazione a freddo di una complessa miscela di erbe officinali, radici e spezie locali.", "Il profilo sensoriale è dominato da sentori profondamente erbacei e terrosi."],
+      link:{label:"amaroherbae.it", url:"https://amaroherbae.it"} },
+    { id:"antico-amaro-delle-terme", name:"Antico Amaro delle Terme", cat:"Liquori e amari", abv:30, place:"Barberino Tavarnelle, Italia", region:"Italia", lat:43.55, lng:11.17, tags:["#amaro", "#terroso", "#complesso", "#forte"], img:"./images/antico-amaro-delle-terme.jpg",
+      teaser:"Un elisir storico toscano legato al territorio di Barberino Tavarnelle.",
+      preview:"La sua formula segreta tramandata da generazioni prevede l'utilizzo di erbe depurative e piante tipiche delle colline fiorentine.",
+      desc:["Un elisir storico toscano legato al territorio di Barberino Tavarnelle. La sua formula segreta tramandata da generazioni prevede l'utilizzo di erbe depurative e piante tipiche delle colline fiorentine.", "In bocca è avvolgente, complesso, con un amaro deciso che stimola la digestione."],
+      link:{label:"toscana.it", url:"https://toscana.it"} },
+    { id:"amaromatto-al-tartufo-gubbio", name:"Amaromatto al Tartufo", cat:"Liquori e amari", abv:28, place:"Gubbio, Italia", region:"Italia", lat:43.3515, lng:12.5776, tags:["#amaro", "#terroso", "#umami", "#particolare"], img:"./images/amaromatto-al-tartufo-gubbio.jpg",
+      teaser:"Una specialità umbra inusuale ed esclusiva.",
+      preview:"Questo amaro unisce il classico bouquet di erbe amaricanti con l'aggiunta audace di vero tartufo locale infuso artigianalmente.",
+      desc:["Una specialità umbra inusuale ed esclusiva. Questo amaro unisce il classico bouquet di erbe amaricanti con l'aggiunta audace di vero tartufo locale infuso artigianalmente.", "Al palato regala un'esperienza 'umami' affascinante: terroso, profondo e dal sapore boschivo."],
+      link:{label:"tartufodigubbio.it", url:"https://tartufodigubbio.it"} },
+    { id:"commandaria-cipro", name:"Commandaria", cat:"Liquori e amari", abv:15, place:"Limassol, Cipro", region:"Cipro", lat:34.7071, lng:33.0226, tags:["#vino-liquoroso", "#dolce", "#storico", "#frutta-rossa"], img:"./images/commandaria-cipro.jpg",
+      teaser:"Vantando il titolo di vino liquoroso con denominazione d'origine più antica al mondo, la Commandaria è un simbolo di Cipro.",
+      preview:"Prodotta con uve autoctone appassite al sole, invecchiata in botti di rovere.",
+      desc:["Vantando il titolo di vino liquoroso con denominazione d'origine più antica al mondo, la Commandaria è un simbolo di Cipro. Prodotta con uve autoctone appassite al sole, invecchiata in botti di rovere.", "Il risultato è un nettare denso e dolce, con sentori intensi di fichi secchi e datteri."],
+      link:{label:"laikocosmos.com", url:"https://laikocosmos.com"} },
+    { id:"amaro-adriano-tivoli", name:"Amaro Adriano", cat:"Liquori e amari", abv:38, place:"Tivoli, Italia", region:"Italia", lat:41.96, lng:12.7981, tags:["#amaro", "#agrumato", "#forte", "#dolce-amaro"], img:"./images/amaro-adriano-tivoli.jpg",
+      teaser:"Dedicato alla figura imponente dell'Imperatore Adriano, questo amaro tiburtino è un prodotto di grande carattere e spessore.",
+      preview:"La ricetta si basa su un equilibrio perfetto tra le note dolci e aspre del melangolo e la forza alcolica dominante.",
+      desc:["Dedicato alla figura imponente dell'Imperatore Adriano, questo amaro tiburtino è un prodotto di grande carattere e spessore.", "La ricetta si basa su un equilibrio perfetto tra le note dolci e aspre del melangolo e la forza alcolica dominante."],
+      link:{label:"liquoriditivoli.it", url:"https://liquoriditivoli.it"} },
+    { id:"camatti-liguria", name:"Amaro Camatti", cat:"Liquori e amari", abv:20, place:"Genova, Italia", region:"Italia", lat:44.4056, lng:8.9463, tags:["#amaro", "#dolce-amaro", "#balsamico", "#mandorlato"], img:"./images/camatti-liguria.jpg",
+      teaser:"Un'icona della tradizione genovese, l'Amaro Camatti nasce agli inizi del Novecento.",
+      preview:"La sua ricetta comprende mandorlo, arancia amara e menta.",
+      desc:["Un'icona della tradizione genovese, l'Amaro Camatti nasce agli inizi del Novecento. La sua ricetta comprende mandorlo, arancia amara e menta.", "Si distingue per la sua eccezionale morbidezza e il grado alcolico contenuto. Al palato risulta dolce-amaro e finemente speziato."],
+      link:{label:"amarocamatti.it", url:"https://amarocamatti.it"} },
+    { id:"amaro-formidabile-roma", name:"Amaro Formidabile", cat:"Liquori e amari", abv:33.5, place:"Roma, Italia", region:"Italia", lat:41.9028, lng:12.4964, tags:["#amaro", "#complesso", "#speziato", "#fumoso"], img:"./images/amaro-formidabile-roma.jpg",
+      teaser:"Nato nella Capitale, l'Amaro Formidabile è un elisir contemporaneo prodotto tramite macerazione a freddo.",
+      preview:"In bocca è polifonico: sprigiona note di china, rabarbaro, assenzio, rosa moscata.",
+      desc:["Nato nella Capitale, l'Amaro Formidabile è un elisir contemporaneo prodotto tramite macerazione a freddo. In bocca è polifonico: sprigiona note di china, rabarbaro, assenzio, rosa moscata.", "Il suo finale è lunghissimo, incensato e fumoso."],
+      link:{label:"amaroformidabile.com", url:"https://amaroformidabile.com"} },
+    { id:"amaro-del-gargano-puglia", name:"Amaro del Gargano", cat:"Liquori e amari", abv:30, place:"Vico del Gargano, Italia", region:"Italia", lat:41.8964, lng:15.9564, tags:["#amaro", "#agrumato", "#balsamico", "#mediterraneo"], img:"./images/amaro-del-gargano-puglia.jpg",
+      teaser:"Un amaro che racchiude i profumi del promontorio pugliese.",
+      preview:"Ottenuto dall'infusione di bucce di agrumi garganici e foglie di ulivo.",
+      desc:["Un amaro che racchiude i profumi del promontorio pugliese. Ottenuto dall'infusione di bucce di agrumi garganici e foglie di ulivo.", "Il bouquet è un inno alla macchia mediterranea: fresco, balsamico e intensamente agrumato."],
+      link:{label:"anticatradizione.it", url:"https://anticatradizione.it"} },
+    { id:"centerbe-abruzzo", name:"Centerbe", cat:"Liquori e amari", abv:70, place:"Tocco da Casauria, Italia", region:"Italia", lat:42.2167, lng:13.9, tags:["#liquore", "#forte", "#erbaceo", "#secco"], img:"./images/centerbe-abruzzo.jpg",
+      teaser:"Uno dei liquori più potenti d'Italia, originario di Tocco da Casauria.",
+      preview:"Con un'impressionante gradazione di 70°, il Centerbe è un concentrato verde smeraldo di erbe officinali.",
+      desc:["Uno dei liquori più potenti d'Italia, originario di Tocco da Casauria. Con un'impressionante gradazione di 70°, il Centerbe è un concentrato verde smeraldo di erbe officinali.", "Estremamente secco, pungente e balsamico."],
+      link:{label:"wikipedia.it", url:"https://wikipedia.it"} },
+    { id:"genziana-delle-pecore", name:"Genziana delle Pecore", cat:"Liquori e amari", abv:30, place:"Valle Castellana, Italia", region:"Italia", lat:42.7167, lng:13.55, tags:["#liquore", "#amaro", "#secco", "#terroso"], img:"./images/genziana-delle-pecore.jpg",
+      teaser:"Legato alla cultura agropastorale abruzzese.",
+      preview:"Ottenuto dalla lenta macerazione delle radici di Genziana Maggiore.",
+      desc:["Legato alla cultura agropastorale abruzzese. Ottenuto dalla lenta macerazione delle radici di Genziana Maggiore.", "Questo liquore è austero, secco e orgogliosamente amaro, con un sapore terroso e legnoso che favorisce la digestione."],
+      link:{label:"prodottitipiciabruzzo.it", url:"https://prodottitipiciabruzzo.it"} },
+    { id:"amaretto-disaronno", name:"Disaronno Originale", cat:"Liquori e amari", abv:28, place:"Saronno, Italia", region:"Italia", lat:45.625, lng:9.0333, tags:["#liquore", "#dolce", "#mandorlato", "#morbido"], img:"./images/amaretto-disaronno.jpg",
+      teaser:"L'icona mondiale del liquore italiano.",
+      preview:"Ottenuto dall'infusione di noccioli di albicocca e 17 erbe.",
+      desc:["L'icona mondiale del liquore italiano. Ottenuto dall'infusione di noccioli di albicocca e 17 erbe. Ha un inconfondibile profumo di marzapane.", "In bocca è denso, dolce e vellutato. Estremamente versatile per la mixology."],
+      link:{label:"misya.info", url:"https://misya.info"} },
+    { id:"l-abruzzese", name:"L'Abruzzese", cat:"Liquori e amari", abv:30, place:"San Giovanni Teatino, Italia", region:"Italia", lat:42.4, lng:14.2, tags:["#amaro", "#agrumato", "#rotondo", "#fruttato"], img:"./images/l-abruzzese.jpg",
+      teaser:"Un amaro regionale semplice e genuino.",
+      preview:"Prodotto tramite la macerazione di scorze di agrumi del sud e radici appenniniche.",
+      desc:["Un amaro regionale semplice e genuino. Prodotto tramite la macerazione di scorze di agrumi del sud e radici appenniniche.", "Il profilo organolettico è rotondo e fruttato, dominato da chiare note di arancia dolce."],
+      link:{label:"amazon.it", url:"https://amazon.it"} },
+    { id:"fernet-branca", name:"Fernet-Branca", cat:"Liquori e amari", abv:39, place:"Milano, Italia", region:"Italia", lat:45.4642, lng:9.19, tags:["#amaro", "#forte", "#balsamico", "#mentolato"], img:"./images/fernet-branca.jpg",
+      teaser:"Il re degli amari balsamici, nato a Milano nel 1845.",
+      preview:"Composto da 27 botaniche tra cui aloe e zafferano.",
+      desc:["Il re degli amari balsamici, nato a Milano nel 1845. Composto da 27 botaniche tra cui aloe e zafferano.", "Al palato è inconfondibile: austero, intensamente mentolato e balsamico, quasi medicinale."],
+      link:{label:"wikipedia.it", url:"https://wikipedia.it"} },
+    { id:"snaps", name:"Aalborg Taffel Akvavit", cat:"Liquori e amari", abv:40, place:"Aalborg, Danimarca", region:"Danimarca", lat:57.0488, lng:9.9217, tags:["#acquavite", "#secco", "#speziato", "#forte"], img:"./images/snaps.jpg",
+      teaser:"Famiglia di acquaviti tradizionali scandinave.",
+      preview:"Tipicamente distillate da patate o cereali e aromatizzate con erbe come cumino o aneto.",
+      desc:["Famiglia di acquaviti tradizionali scandinave. Tipicamente distillate da patate o cereali e aromatizzate con erbe come cumino o aneto.", "Servito rigorosamente ghiacciato, risulta tagliente, secco e intensamente aromatico."],
+      link:{label:"wikipedia.it", url:"https://wikipedia.it"} },
+    { id:"piera-amaro-urbano", name:"Piera - Amaro Urbano", cat:"Liquori e amari", abv:28, place:"Roma, Italia", region:"Italia", lat:41.9028, lng:12.4964, tags:["#amaro", "#agrumato", "#contemporaneo", "#erbaceo"], img:"./images/piera-amaro-urbano.jpg",
+      teaser:"Piera è un amaro di nuova concezione, definito 'urbano' per il suo spirito moderno.",
+      preview:"Presenta un equilibrio raffinato tra note erbacee amare e freschi sentori agrumati e floreali.",
+      desc:["Piera è un amaro di nuova concezione, definito 'urbano' per il suo spirito moderno. Presenta un equilibrio raffinato tra note erbacee amare e freschi sentori agrumati e floreali.", "Al palato è scorrevole e profumato."],
+      link:{label:"pieraamaro.it", url:"https://pieraamaro.it"} },
+    { id:"amaro-della-sardegna", name:"Mirto di Sardegna", cat:"Liquori e amari", abv:30, place:"Cagliari, Italia", region:"Italia", lat:39.2238, lng:9.1217, tags:["#amaro", "#balsamico", "#macchia-mediterranea", "#intenso"], img:"./images/amaro-della-sardegna.jpg",
+      teaser:"Racchiude la quintessenza botanica dell'isola sarda, integrando mirto, corbezzolo e finocchietto.",
+      preview:"Al naso è un'esplosione di macchia mediterranea.",
+      desc:["Racchiude la quintessenza botanica dell'isola sarda, integrando mirto, corbezzolo e finocchietto. Al naso è un'esplosione di macchia mediterranea.", "In bocca rivela una struttura robusta e un amaro legnoso."],
+      link:{label:"sardegna.it", url:"https://sardegna.it"} },
+    { id:"amaro-di-piperna", name:"Amaro alla Piperna", cat:"Liquori e amari", abv:30, place:"Ischia, Italia", region:"Italia", lat:40.7333, lng:13.95, tags:["#amaro", "#erbaceo", "#digestivo", "#mediterraneo"], img:"./images/amaro-di-piperna.jpg",
+      teaser:"Autentica gemma dell'Isola d'Ischia.",
+      preview:"Incentrato sulla Piperna, un raro timo selvatico isolano.",
+      desc:["Autentica gemma dell'Isola d'Ischia. Incentrato sulla Piperna, un raro timo selvatico isolano.", "L'aroma è unico: erbaceo, balsamico, con leggeri ricordi di resina. Il sapore è deciso e mediterraneo."],
+      link:{label:"ischia.it", url:"https://ischia.it"} },
+    { id:"caffe-borghetti", name:"Caffè Borghetti", cat:"Liquori e amari", abv:25, place:"Milano, Italia", region:"Italia", lat:45.4642, lng:9.19, tags:["#liquore", "#caffè", "#dolce", "#energizzante"], img:"./images/caffe-borghetti.jpg",
+      teaser:"Nato ad Ancona nel 1860, è il liquore al caffè per eccellenza in Italia.",
+      preview:"Contiene vero caffè espresso miscelato all'alcol.",
+      desc:["Nato ad Ancona nel 1860, è il liquore al caffè per eccellenza in Italia. Contiene vero caffè espresso miscelato all'alcol.", "Al naso è puro caffè tostato con note di cioccolato fondente; al palato è caldo e dolce."],
+      link:{label:"wikipedia.it", url:"https://wikipedia.it"} },
+    { id:"amarsa", name:"Amaro Amarsa", cat:"Liquori e amari", abv:28, place:"Roma, Italia", region:"Italia", lat:41.9028, lng:12.4964, tags:["#amaro", "#speziato", "#persistente", "#equilibrato"], img:"./images/amarsa.jpg",
+      teaser:"Un amaro artigianale audace per chi ama sapori decisi.",
+      preview:"Prodotto con lenta infusione di radici pregiate e spezie.",
+      desc:["Un amaro artigianale audace per chi ama sapori decisi. Prodotto con lenta infusione di radici pregiate e spezie.", "In bocca è denso e avvolgente, con un amaro profondo e speziato molto persistente."],
+      link:{label:"amarsa.it", url:"https://amarsa.it"} },
+    { id:"unicum", name:"Unicum", cat:"Liquori e amari", abv:40, place:"Budapest, Ungheria", region:"Ungheria", lat:47.4979, lng:19.0402, tags:["#amaro", "#balsamico", "#scuro", "#complesso"], img:"./images/unicum.jpg",
+      teaser:"Storico amaro ungherese con oltre 40 erbe medicinali.",
+      preview:"Celebre per la bottiglia sferica e il colore nerissimo.",
+      desc:["Storico amaro ungherese con oltre 40 erbe medicinali. Celebre per la bottiglia sferica e il colore nerissimo.", "Risulta marcatamente amaro, balsamico, quasi medicinale, con sentori di pino e spezie orientali."],
+      link:{label:"wikipedia.it", url:"https://wikipedia.it"} },
+    { id:"amaro-alla-rucola", name:"Rucolino", cat:"Liquori e amari", abv:30, place:"Ischia, Italia", region:"Italia", lat:40.7333, lng:13.95, tags:["#amaro", "#erbaceo", "#piccantino", "#digestivo"], img:"./images/amaro-alla-rucola.jpg",
+      teaser:"Conosciuto come 'Rucolino', è una specialità ischitana ottenuta dalla macerazione in alcol delle giovani foglie di rucola selvatica.",
+      preview:"Il palato sorprende con un equilibrio dolce all'ingresso e un finale erbaceo leggermente piccantino.",
+      desc:["Conosciuto come 'Rucolino', è una specialità ischitana ottenuta dalla macerazione in alcol delle giovani foglie di rucola selvatica.", "Il palato sorprende con un equilibrio dolce all'ingresso e un finale erbaceo leggermente piccantino."],
+      link:{label:"ischia.it", url:"https://ischia.it"} },
+    { id:"mirto-bianco", name:"Mirto Bianco", cat:"Liquori e amari", abv:28, place:"Simaxis, Italia", region:"Italia", lat:39.9333, lng:8.6333, tags:["#liquore", "#floreale", "#delicato", "#dolce"], img:"./images/mirto-bianco.jpg",
+      teaser:"Una variante delicata del liquore sardo, nata dall'infusione dei giovani germogli della pianta di mirto.",
+      preview:"Di colore giallo paglierino, il bouquet è raffinato: note floreali e un ricordo mielato.",
+      desc:["Una variante delicata del liquore sardo, nata dall'infusione dei giovani germogli della pianta di mirto. Di colore giallo paglierino, il bouquet è raffinato: note floreali e un ricordo mielato.", "Al palato è vellutato e fresco."],
+      link:{label:"dispensas.it", url:"https://dispensas.it"} },
+    { id:"moretta-di-pergola", name:"Moretta Fanese", cat:"Liquori e amari", abv:33, place:"Fano, Italia", region:"Italia", lat:43.8433, lng:13.0186, tags:["#liquore", "#caffè", "#anice", "#forte"], img:"./images/moretta-di-pergola.jpg",
+      teaser:"Ingrediente fondamentale per la 'Moretta fanese'.",
+      preview:"Miscela alcolica dolce e robusta di anice, rum e brandy.",
+      desc:["Ingrediente fondamentale per la 'Moretta fanese'. Miscela alcolica dolce e robusta di anice, rum e brandy.", "Pensato per essere riscaldato e mescolato al caffè espresso bollente per scaldare i marinai nei mesi invernali."],
+      link:{label:"marche.it", url:"https://marche.it"} },
+    { id:"prugnolo-selvatico", name:"Prugnolino", cat:"Liquori e amari", abv:30, place:"Cantiano, Italia", region:"Italia", lat:43.4667, lng:12.6333, tags:["#liquore", "#fruttato", "#astringente", "#dolce-aspro"], img:"./images/prugnolo-selvatico.jpg",
+      teaser:"Elisir autunnale preparato con le bacche del prugnolo.",
+      preview:"Il profilo aromatico è intensamente fruttato, con sentori di prugna selvatica e frutti di bosco, bilanciato tra dolcezza e una piacevole asprezza tannica.",
+      desc:["Elisir autunnale preparato con le bacche del prugnolo.", "Il profilo aromatico è intensamente fruttato, con sentori di prugna selvatica e frutti di bosco, bilanciato tra dolcezza e una piacevole asprezza tannica."],
+      link:{label:"liquoriartigianali.it", url:"https://liquoriartigianali.it"} },
+    { id:"ciardon", name:"Ciardon Bordiga", cat:"Liquori e amari", abv:30, place:"Cuneo, Italia", region:"Italia", lat:44.3841, lng:7.5426, tags:["#liquore", "#vegetale", "#amaro", "#terroso"], img:"./images/ciardon.jpg",
+      teaser:"Raro liquore alpino realizzato dai cardi selvatici.",
+      preview:"L'aroma ricorda il carciofo crudo e l'erba bagnata.",
+      desc:["Raro liquore alpino realizzato dai cardi selvatici. L'aroma ricorda il carciofo crudo e l'erba bagnata.", "In bocca si rivela decisamente amaro, astringente e terroso. Digestivo funzionale di montagna."],
+      link:{label:"prodottilocali.it", url:"https://prodottilocali.it"} },
+    { id:"china-riccardi", name:"China Riccardi", cat:"Liquori e amari", abv:30, place:"Tivoli, Italia", region:"Italia", lat:41.96, lng:12.7981, tags:["#amaro", "#speziato", "#tonico", "#complesso"], img:"./images/china-riccardi.jpg",
+      teaser:"Storico elisir nato a Tivoli nel 1918.",
+      preview:"Sfrutta le proprietà tonico-digestive dell'estratto di corteccia di China Calissaia.",
+      desc:["Storico elisir nato a Tivoli nel 1918. Sfrutta le proprietà tonico-digestive dell'estratto di corteccia di China Calissaia.", "Il tipico amaro elegante della china si fonde con le dolcezze delle spezie calde d'importazione."],
+      link:{label:"vinumstore.it", url:"https://vinumstore.it"} },
+    { id:"amaro-montenegro", name:"Amaro Montenegro", cat:"Liquori e amari", abv:23, place:"Zola Predosa, Italia", region:"Italia", lat:44.4914, lng:11.2178, tags:["#amaro", "#dolce", "#agrumato", "#botanico"], img:"./images/amaro-montenegro.jpg",
+      teaser:"Creato nel 1885 a Bologna, prevede l'impiego di 40 erbe botaniche.",
+      preview:"Tra i sentori spiccano coriandolo, arancia e artemisia.",
+      desc:["Creato nel 1885 a Bologna, prevede l'impiego di 40 erbe botaniche. Tra i sentori spiccano coriandolo, arancia e artemisia.", "È celebre per il suo gusto amabile, dolce-amaro, setoso e altamente versatile."],
+      link:{label:"wikipedia.it", url:"https://wikipedia.it"} },
+    { id:"jefferson", name:"Amaro Jefferson", cat:"Liquori e amari", abv:30, place:"Montalto Uffugo, Italia", region:"Italia", lat:39.4058, lng:16.1556, tags:["#amaro", "#agrumato", "#mediterraneo", "#equilibrato"], img:"./images/jefferson.jpg",
+      teaser:"Conosciuto come 'Amaro Importante', trionfatore ai World Liqueur Awards.",
+      preview:"Utilizza botaniche calabre raccolte a mano come bergamotto e rosmarino.",
+      desc:["Conosciuto come 'Amaro Importante', trionfatore ai World Liqueur Awards. Utilizza botaniche calabre raccolte a mano come bergamotto e rosmarino.", "In bocca è denso, con freschezza agrumata e un finale amaricante."],
+      link:{label:"wikipedia.it", url:"https://wikipedia.it"} },
+    { id:"jagermeister", name:"Jägermeister", cat:"Liquori e amari", abv:35, place:"Wolfenbüttel, Germania", region:"Germania", lat:52.1622, lng:10.5347, tags:["#amaro", "#balsamico", "#speziato", "#dolce-amaro"], img:"./images/jagermeister.jpg",
+      teaser:"Il famoso amaro tedesco nato nel 1934, ricavato da 56 varietà di erbe e spezie.",
+      preview:"Il profumo è un trionfo balsamico, con note di anice stellato, liquirizia e zenzero.",
+      desc:["Il famoso amaro tedesco nato nel 1934, ricavato da 56 varietà di erbe e spezie. Il profumo è un trionfo balsamico, con note di anice stellato, liquirizia e zenzero.", "Amabile, rotondo e speziato, si beve 'ice cold'."],
+      link:{label:"wikipedia.it", url:"https://wikipedia.it"} },
+    { id:"amaro-del-capo", name:"Vecchio Amaro del Capo", cat:"Liquori e amari", abv:35, place:"Limbadi, Italia", region:"Italia", lat:38.65, lng:15.9167, tags:["#amaro", "#agrumato", "#dolce", "#mentolato"], img:"./images/amaro-del-capo.jpg",
+      teaser:"Il Vecchio Amaro del Capo è l'orgoglio della Calabria.",
+      preview:"Armonizza 29 erbe officinali tra cui mandarino, anice e camomilla.",
+      desc:["Il Vecchio Amaro del Capo è l'orgoglio della Calabria. Armonizza 29 erbe officinali tra cui mandarino, anice e camomilla.", "Profilo aromatico solare, dolce ed intensamente profumato. Ideale a -20°C."],
+      link:{label:"wikipedia.it", url:"https://wikipedia.it"} },
+    { id:"visner-di-pergola", name:"Visner di Pergola", cat:"Liquori e amari", abv:14, place:"Pergola, Italia", region:"Italia", lat:43.5636, lng:12.8353, tags:["#vino-liquoroso", "#fruttato", "#dolce", "#ciliegia"], img:"./images/visner-di-pergola.jpg",
+      teaser:"Vino liquoroso marchigiano ottenuto rifermentando vino rosso con visciole (ciliegie aspre).",
+      preview:"Bouquet inebriante di ciliegia candita e frutti di bosco.",
+      desc:["Vino liquoroso marchigiano ottenuto rifermentando vino rosso con visciole (ciliegie aspre). Bouquet inebriante di ciliegia candita e frutti di bosco.", "In bocca è vellutato, dolce, denso e succoso."],
+      link:{label:"marche.it", url:"https://marche.it"} },
+    { id:"amaro-silano", name:"Amaro Silano", cat:"Liquori e amari", abv:30, place:"Celico, Italia", region:"Italia", lat:39.3167, lng:16.35, tags:["#amaro", "#erbaceo", "#montano", "#dolce-amaro"], img:"./images/amaro-silano.jpg",
+      teaser:"L'amaro più antico di Calabria.",
+      preview:"Utilizza una lenta macerazione di erbe aromatiche di montagna che conferiscono un carattere austero.",
+      desc:["L'amaro più antico di Calabria. Utilizza una lenta macerazione di erbe aromatiche di montagna che conferiscono un carattere austero.", "Al palato offre sfumature erbacee e resinose."],
+      link:{label:"foodweb.it", url:"https://foodweb.it"} },
+    { id:"amaretto-di-tivoli", name:"Amaretto di Tivoli", cat:"Liquori e amari", abv:28, place:"Tivoli, Italia", region:"Italia", lat:41.96, lng:12.7981, tags:["#liquore", "#mandorlato", "#dolce", "#leggero"], img:"./images/amaretto-di-tivoli.jpg",
+      teaser:"Espressione artigianale del classico liquore alla mandorla, basata su una ricetta tiburtina del 1966.",
+      preview:"Evita sentori artificiali, restituendo il sapore puro della mandorla amara.",
+      desc:["Espressione artigianale del classico liquore alla mandorla, basata su una ricetta tiburtina del 1966. Evita sentori artificiali, restituendo il sapore puro della mandorla amara.", "Elegante e sciropposo."],
+      link:{label:"liquoriditivoli.it", url:"https://liquoriditivoli.it"} },
+    { id:"ardbeg-scorch", name:"Ardbeg Scorch", cat:"Scotch whisky", abv:46, place:"Port Ellen, Regno Unito", region:"Regno Unito", lat:55.6281, lng:-6.1897, tags:["#whisky", "#torbato", "#forte", "#affumicato"], img:"./images/ardbeg-scorch.jpg",
+      teaser:"Edizione limitata leggendaria.",
+      preview:"Maturato esclusivamente in botti ex-bourbon pesantemente carbonizzate.",
+      desc:["Edizione limitata leggendaria. Maturato esclusivamente in botti ex-bourbon pesantemente carbonizzate.", "Al naso colpisce con vampate di fumo denso, resina bruciata e carne alla brace. Palato di liquirizia nera e toffee."],
+      link:{label:"whiskyitaly.it", url:"https://whiskyitaly.it"} },
+    { id:"ardbeg-eureka", name:"Ardbeg Hypernova", cat:"Scotch whisky", abv:46, place:"Port Ellen, Regno Unito", region:"Regno Unito", lat:55.6281, lng:-6.1897, tags:["#whisky", "#torbato", "#complesso", "#sperimentale"], img:"./images/ardbeg-eureka.jpg",
+      teaser:"Release speciale stravagante.",
+      preview:"Un esperimento che gioca sui confini del profilo classico Ardbeg.",
+      desc:["Release speciale stravagante. Un esperimento che gioca sui confini del profilo classico Ardbeg.", "Si distingue per una maturazione in legni non convenzionali che apportano note agrumate e mentolate che si fondono con la torba."],
+      link:{label:"ardbeg.com", url:"https://ardbeg.com"} },
+    { id:"ardbeg-smokiverse", name:"Ardbeg Wee Beastie", cat:"Scotch whisky", abv:46, place:"Port Ellen, Regno Unito", region:"Regno Unito", lat:55.6281, lng:-6.1897, tags:["#whisky", "#torbato", "#marittimo", "#intenso"], img:"./images/ardbeg-smokiverse.jpg",
+      teaser:"Un'esperienza degustativa che esplora le dimensioni della torbatura scozzese.",
+      preview:"Al naso si viene investiti da sentori marittimi: alghe essiccate, iodio e salsedine.",
+      desc:["Un'esperienza degustativa che esplora le dimensioni della torbatura scozzese. Al naso si viene investiti da sentori marittimi: alghe essiccate, iodio e salsedine.", "Palato corposo, bilanciato da agrumi canditi."],
+      link:{label:"ardbeg.com", url:"https://ardbeg.com"} },
+    { id:"ardbeg-traigh-bhan-batch-3", name:"Ardbeg Traigh Bhan Batch 3", cat:"Scotch whisky", abv:46.2, place:"Port Ellen, Regno Unito", region:"Regno Unito", lat:55.6281, lng:-6.1897, tags:["#whisky", "#torbato", "#invecchiato", "#rotondo"], img:"./images/ardbeg-traigh-bhan-batch-3.jpg",
+      teaser:"Raro Single Malt invecchiato 19 anni.",
+      preview:"Maturato in un mix di rovere americano e botti ex-sherry Oloroso.",
+      desc:["Raro Single Malt invecchiato 19 anni. Maturato in un mix di rovere americano e botti ex-sherry Oloroso.", "Offre complesse armonie di fumo dolce, anice, melassa, scatola di sigari e cioccolato fondente."],
+      link:{label:"whiskyitaly.it", url:"https://whiskyitaly.it"} },
+    { id:"a-d-rattray-dufftown-11", name:"A.D. Rattray Dufftown 11", cat:"Scotch whisky", abv:58.2, place:"Dufftown, Regno Unito", region:"Regno Unito", lat:57.4436, lng:-3.1267, tags:["#whisky", "#non-torbato", "#floreale", "#fruttato"], img:"./images/a-d-rattray-dufftown-11.jpg",
+      teaser:"Raffinato imbottigliamento indipendente dalla distilleria Dufftown.",
+      preview:"Invecchiato 11 anni e imbottigliato 'cask strength'.",
+      desc:["Raffinato imbottigliamento indipendente dalla distilleria Dufftown. Invecchiato 11 anni e imbottigliato 'cask strength'.", "Un'esplosione floreale e fruttata, tipica dello Speyside: mele verdi, pera ed erba appena tagliata."],
+      link:{label:"adrattray.com", url:"https://adrattray.com"} },
+    { id:"machrie-noir-peated-lochranza-malt", name:"Machrie Moor Peated Arran", cat:"Scotch whisky", abv:46, place:"Lochranza, Regno Unito", region:"Regno Unito", lat:55.7069, lng:-5.2969, tags:["#whisky", "#torbato", "#agrumato", "#fresco"], img:"./images/machrie-noir-peated-lochranza-malt.jpg",
+      teaser:"L'affascinante versione torbata prodotta dalla distilleria di Lochranza sull'Isola di Arran.",
+      preview:"Il tipico frutteto isolano si incontra con un fumo terroso.",
+      desc:["L'affascinante versione torbata prodotta dalla distilleria di Lochranza sull'Isola di Arran. Il tipico frutteto isolano si incontra con un fumo terroso.", "Un single malt fresco e accessibile."],
+      link:{label:"arranwhisky.com", url:"https://arranwhisky.com"} },
+    { id:"cadenhead-s-loch-lomond-30", name:"Cadenhead's Loch Lomond 30", cat:"Scotch whisky", abv:48, place:"Alexandria, Regno Unito", region:"Regno Unito", lat:55.987, lng:-4.583, tags:["#whisky", "#invecchiato", "#complesso", "#frutta-tropicale"], img:"./images/cadenhead-s-loch-lomond-30.jpg",
+      teaser:"Un capolavoro assoluto dell'invecchiamento.",
+      preview:"Trent'anni in botte regalano aromi profondi di cera d'api, cuoio, frutta tropicale e cereali tostati.",
+      desc:["Un capolavoro assoluto dell'invecchiamento. Trent'anni in botte regalano aromi profondi di cera d'api, cuoio, frutta tropicale e cereali tostati.", "Palato viscoso, una seta liquida che si dissolve in un finale interminabile."],
+      link:{label:"cadenhead.scot", url:"https://cadenhead.scot"} },
+    { id:"bunnahabhain-an-cladach", name:"Bunnahabhain An Cladach", cat:"Scotch whisky", abv:50, place:"Port Askaig, Regno Unito", region:"Regno Unito", lat:55.85, lng:-6.1064, tags:["#whisky", "#non-torbato", "#sherried", "#salino"], img:"./images/bunnahabhain-an-cladach.jpg",
+      teaser:"Whisky non torbato, rispettando la tradizione storica di Bunnahabhain.",
+      preview:"Maturato in botti di sherry.",
+      desc:["Whisky non torbato, rispettando la tradizione storica di Bunnahabhain. Maturato in botti di sherry.", "Profumi inebrianti di uvetta, fichi, noci tostate e salsedine marina. Palato corposo e decadente di torta di frutta."],
+      link:{label:"bunnahabhain.com", url:"https://bunnahabhain.com"} },
+    { id:"cadenhead-s-1842-peated", name:"Cadenhead's 1842", cat:"Scotch whisky", abv:46, place:"Campbeltown, Regno Unito", region:"Regno Unito", lat:55.4256, lng:-5.6058, tags:["#whisky", "#blend", "#torbato", "#marino"], img:"./images/cadenhead-s-1842-peated.jpg",
+      teaser:"Eccellente blend torbato ideato dai maestri di Cadenhead's.",
+      preview:"Miscela di single malt molto torbati con pregiati whisky di grano.",
+      desc:["Eccellente blend torbato ideato dai maestri di Cadenhead's. Miscela di single malt molto torbati con pregiati whisky di grano.", "L'attacco è salmastro, addolcito dalle note maltate e di caramello del grain whisky."],
+      link:{label:"cadenhead.scot", url:"https://cadenhead.scot"} },
+    { id:"holyrood-new-make", name:"Holyrood New Make", cat:"Scotch whisky", abv:60, place:"Edimburgo, Regno Unito", region:"Regno Unito", lat:55.9533, lng:-3.1883, tags:["#distillato", "#forte", "#puro", "#fruttato"], img:"./images/holyrood-new-make.jpg",
+      teaser:"Distillato appena uscito dagli alambicchi della Holyrood di Edimburgo, prima di toccare il legno.",
+      preview:"Cristallino e potente, sprigiona l'anima cruda del malto e dei lieviti con note pungenti ed estremamente fruttate.",
+      desc:["Distillato appena uscito dagli alambicchi della Holyrood di Edimburgo, prima di toccare il legno.", "Cristallino e potente, sprigiona l'anima cruda del malto e dei lieviti con note pungenti ed estremamente fruttate."],
+      link:{label:"holyrooddistillery.co.uk", url:"https://holyrooddistillery.co.uk"} },
+    { id:"holyrood-height-of-arrows-bright", name:"Height of Arrows Bright", cat:"Gin", abv:43, place:"Edimburgo, Regno Unito", region:"Regno Unito", lat:55.9533, lng:-3.1883, tags:["#gin", "#fresco", "#agrumato", "#pungente"], img:"./images/holyrood-height-of-arrows-bright.jpg",
+      teaser:"Esplosione luminosa e rinfrescante della botanica principe: il ginepro.",
+      preview:"Questo gin esplode al naso con note taglienti, agrumate e pungenti.",
+      desc:["Esplosione luminosa e rinfrescante della botanica principe: il ginepro. Questo gin esplode al naso con note taglienti, agrumate e pungenti.", "Incredibilmente fresco, è la base definitiva per un Gin Tonic tonificante."],
+      link:{label:"holyrooddistillery.co.uk", url:"https://holyrooddistillery.co.uk"} },
+    { id:"holyrood-height-of-arrows-funk", name:"Height of Arrows Funk", cat:"Gin", abv:43, place:"Edimburgo, Regno Unito", region:"Regno Unito", lat:55.9533, lng:-3.1883, tags:["#gin", "#terroso", "#umami", "#complesso"], img:"./images/holyrood-height-of-arrows-funk.jpg",
+      teaser:"L'anima oscura e ribelle del ginepro.",
+      preview:"Distillazione che favorisce le componenti più pesanti, regalando un gin selvaggio e terroso.",
+      desc:["L'anima oscura e ribelle del ginepro. Distillazione che favorisce le componenti più pesanti, regalando un gin selvaggio e terroso.", "Note muschiate e di radice bagnata, perfetto per mixology sperimentale."],
+      link:{label:"holyrooddistillery.co.uk", url:"https://holyrooddistillery.co.uk"} },
+    { id:"holyrood-height-of-arrows-homeland", name:"Height of Arrows Heavy", cat:"Gin", abv:43, place:"Edimburgo, Regno Unito", region:"Regno Unito", lat:55.9533, lng:-3.1883, tags:["#gin", "#morbido", "#salino", "#equilibrato"], img:"./images/holyrood-height-of-arrows-homeland.jpg",
+      teaser:"Versione classica che omaggia l'essenzialità.",
+      preview:"Oltre al ginepro utilizza solo sale marino locale e cera d'api.",
+      desc:["Versione classica che omaggia l'essenzialità. Oltre al ginepro utilizza solo sale marino locale e cera d'api.", "La cera dona una consistenza setosa, mentre il sale esalta i sapori. Rotondo e perfettamente equilibrato."],
+      link:{label:"holyrooddistillery.co.uk", url:"https://holyrooddistillery.co.uk"} },
+    { id:"gin-3r-normand", name:"Gin 3R Normand", cat:"Gin", abv:40, place:"Rouen, Francia", region:"Francia", lat:49.4432, lng:1.0993, tags:["#gin", "#fruttato", "#mela", "#elegante"], img:"./images/gin-3r-normand.jpg",
+      teaser:"Distillato artigianalmente in Normandia.",
+      preview:"Incorpora botaniche tipiche della campagna normanna, tra cui la mela locale che dona una nota fruttata e croccante.",
+      desc:["Distillato artigianalmente in Normandia. Incorpora botaniche tipiche della campagna normanna, tra cui la mela locale che dona una nota fruttata e croccante.", "Elegante, raffinato e dal profilo fresco."],
+      link:{label:"3r-normand.com", url:"https://3r-normand.com"} },
+    { id:"gin-mare", name:"Gin Mare", cat:"Gin", abv:42.7, place:"Vilanova i la Geltrú, Spagna", region:"Spagna", lat:41.2242, lng:1.7256, tags:["#gin", "#mediterraneo", "#erbaceo", "#oliva"], img:"./images/gin-mare.jpg",
+      teaser:"Icona del gin mediterraneo.",
+      preview:"Utilizza un bouquet atipico: oliva Arbequina, rosmarino, timo e basilico.",
+      desc:["Icona del gin mediterraneo. Utilizza un bouquet atipico: oliva Arbequina, rosmarino, timo e basilico.", "Al naso è una passeggiata in un orto litoraneo. Al palato è sapido e profondamente aromatico."],
+      link:{label:"ginmare.com", url:"https://ginmare.com"} },
+    { id:"gin-mare-capri", name:"Gin Mare Capri", cat:"Gin", abv:42.7, place:"Vilanova i la Geltrú, Spagna", region:"Spagna", lat:41.2242, lng:1.7256, tags:["#gin", "#agrumato", "#bergamotto", "#mediterraneo"], img:"./images/gin-mare-capri.jpg",
+      teaser:"Edizione decimo anniversario dedicata al Sud Italia.",
+      preview:"Aggiunge i profumatissimi limoni IGP di Capri e il bergamotto della Calabria.",
+      desc:["Edizione decimo anniversario dedicata al Sud Italia. Aggiunge i profumatissimi limoni IGP di Capri e il bergamotto della Calabria.", "Più solare e agrumato dell'originale, attenuando leggermente l'impatto sapido."],
+      link:{label:"ginmare.com", url:"https://ginmare.com"} },
+  ];
+
+  catOrder = ["Vodka", "Liquori e amari", "Scotch whisky", "Gin"];
+  strengthOrder = ["Analcolico","Leggero","Medio","Forte"];
+
+  strengthOf(abv){ if(abv<=0) return "Analcolico"; if(abv<15) return "Leggero"; if(abv<25) return "Medio"; return "Forte"; }
+
+  catAnchor(cat){ return "cat-"+this.catOrder.indexOf(cat); }
+  scrollToCat(cat){
+    const el = document.getElementById(this.catAnchor(cat));
+    if(el){ const y = el.getBoundingClientRect().top + window.pageYOffset - 56; window.scrollTo({ top:y, behavior:"smooth" }); }
+  }
+
+  matches(d){
+    const s = this.state;
+    const q = s.searchText.trim().toLowerCase();
+    if(q){
+      const hay = (d.name+" "+d.cat+" "+d.place+" "+d.region+" "+d.tags.join(" ")+" "+d.desc.join(" ")+" "+d.teaser).toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    if(this.hasAny(s.cats) && !s.cats[d.cat]) return false;
+    if(this.hasAny(s.regions) && !s.regions[d.region]) return false;
+    if(this.hasAny(s.strengths) && !s.strengths[this.strengthOf(d.abv)]) return false;
+    if(this.hasAny(s.tags) && !d.tags.some(t=>s.tags[t])) return false;
+    return true;
+  }
+  hasAny(obj){ return Object.keys(obj).some(k=>obj[k]); }
+
+  toggleSet(key, val){
+    this.setState(s=>{ const next={...s[key]}; if(next[val]) delete next[val]; else next[val]=true; return {[key]:next}; });
+  }
+
+  componentDidMount(){ this.initMap(); }
+  componentDidUpdate(){ this.syncMarkers(); }
+
+  initMap(){
+    if(!window.L){ setTimeout(()=>this.initMap(), 120); return; }
+    const el = document.getElementById("drinkmap");
+    if(!el || this.map) return;
+    const map = L.map(el, { zoomControl:true, worldCopyJump:true, attributionControl:false });
+    this.map = map;
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", { subdomains:"abcd", maxZoom:19 }).addTo(map);
+    this.markers = {};
+    this.drinks.forEach(d=>{
+      const icon = L.divIcon({ className:"", html:`<div class="dmk-pin"><span></span></div>`, iconSize:[18,18], iconAnchor:[9,9] });
+      const m = L.marker([d.lat, d.lng], { icon });
+      m.bindPopup(`<div style="min-width:150px"><div style="font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;color:#2a2018;line-height:1.1">${d.name}</div><div style="font-size:12px;color:#7a6a56;margin-top:3px">${d.place}</div><button data-goto="${d.id}" style="margin-top:8px;padding:5px 10px;background:#ff6b3d;border:none;color:#ffffff;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Work Sans',sans-serif">Vai al drink →</button></div>`);
+      m.on("click", ()=>{ this._focusId = d.id; });
+      this.markers[d.id] = m;
+    });
+    map.on("popupopen", (e)=>{
+      const btn = e.popup.getElement().querySelector("[data-goto]");
+      if(btn) btn.addEventListener("click", ()=>this.focusDrink(btn.getAttribute("data-goto"), false));
+    });
+    map.setView([25,5], 1);
+    this.syncMarkers(true);
+  }
+
+  syncMarkers(force){
+    if(!this.map || !this.markers) return;
+    const visible = this.drinks.filter(d=>this.matches(d));
+    const key = visible.map(d=>d.id).join(",");
+    if(!force && key===this.state.visKey) return;
+    const visSet = new Set(visible.map(d=>d.id));
+    this.drinks.forEach(d=>{
+      const m = this.markers[d.id];
+      const on = visSet.has(d.id);
+      if(on && !this.map.hasLayer(m)) m.addTo(this.map);
+      if(!on && this.map.hasLayer(m)) this.map.removeLayer(m);
+    });
+    if(this.state.visKey!==key) this.setState({ visKey:key });
+    if(visible.length){
+      const bounds = L.latLngBounds(visible.map(d=>[d.lat,d.lng]));
+      try{ this.map.fitBounds(bounds, { padding:[40,40], maxZoom:6, animate:true }); }catch(e){}
+    }
+  }
+
+  focusDrink(id, pan){
+    this.setState(s=>({ expanded:{...s.expanded, [id]:true} }), ()=>{
+      const el = document.getElementById("card-"+id);
+      if(el){ const y = el.getBoundingClientRect().top + window.pageYOffset - 12; window.scrollTo({ top:y, behavior:"smooth" }); }
+    });
+    if(pan && this.map && this.markers[id]){
+      const m = this.markers[id];
+      this.map.panTo(m.getLatLng(), { animate:true });
+      m.openPopup();
+    }
+  }
+
+  chip(key, label){
+    const active = !!this.state[key+""] ; // placeholder, overridden below
+    return label;
+  }
+
+  buildChips(key, values, labelFn){
+    return values.map(v=>{
+      const active = !!this.state[key][v];
+      const base = "font-size:12.5px; padding:6px 12px; border-radius:999px; cursor:pointer; transition:all .12s; ";
+      const style = active
+        ? base+"background:#ff6b3d; color:#ffffff; border:1px solid #ff6b3d; font-weight:600;"
+        : base+"background:transparent; color:#6b5a48; border:1px solid rgba(0,0,0,.16); font-weight:500;";
+      return { label: labelFn?labelFn(v):v, style, onToggle: ()=>this.toggleSet(key, v) };
+    });
+  }
+
+  renderVals(){
+    const s = this.state;
+    const q = s.searchText;
+    const allTags = Array.from(new Set(this.drinks.flatMap(d=>d.tags))).sort((a,b)=>a.localeCompare(b,"it"));
+    const allRegions = Array.from(new Set(this.drinks.map(d=>d.region))).sort((a,b)=>a.localeCompare(b,"it"));
+    const filtered = this.drinks.filter(d=>this.matches(d));
+
+    const groups = this.catOrder.map(cat=>{
+      const list = filtered.filter(d=>d.cat===cat).map(d=>{
+        const expanded = !!s.expanded[d.id];
+        return {
+          id:d.id, name:d.name, place:d.place, tags:d.tags, teaser:d.teaser, desc:d.desc, img:d.img,
+          preview: d.preview || "",
+          abvLabel: d.abv>0 ? d.abv+"% vol" : "0% · Analcolico",
+          strength: this.strengthOf(d.abv),
+          slotId: "slot-"+d.id, slotHint: "Foto — "+d.name,
+          expanded, collapsed: !expanded,
+          link: !!d.link, linkUrl: d.link?d.link.url:"", linkLabel: d.link?d.link.label:"",
+          toggleLabel: expanded ? "Chiudi ↑" : "Leggi tutto →",
+          onToggle: ()=>this.setState(st=>({ expanded:{...st.expanded, [d.id]: !st.expanded[d.id]} })),
+          onShowMap: ()=>this.focusDrink(d.id, true)
+        };
+      });
+      return { category:cat, anchor:this.catAnchor(cat), count:list.length+(list.length===1?" drink":" drink"), drinks:list };
+    }).filter(g=>g.drinks.length>0);
+
+    const catNav = groups.map(g=>({ label:g.category, count:g.drinks.length, onClick:()=>this.scrollToCat(g.category) }));
+
+    const activeN = ["cats","regions","strengths","tags"].reduce((n,k)=>n+Object.keys(s[k]).filter(x=>s[k][x]).length,0);
+
+    const filterGroups = [
+      { label:"Categoria", chips: this.buildChips("cats", this.catOrder) },
+      { label:"Gradazione", chips: this.buildChips("strengths", this.strengthOrder) },
+      { label:"Luogo / regione", chips: this.buildChips("regions", allRegions) },
+      { label:"Tag", chips: this.buildChips("tags", allTags) }
+    ];
+
+    return {
+      searchText: q,
+      onSearch: (e)=>this.setState({ searchText: e.target.value }),
+      showFilters: s.showFilters,
+      toggleFilters: ()=>this.setState(st=>({ showFilters: !st.showFilters })),
+      filterBtnBg: activeN>0 ? "#ff6b3d" : "#ffffff",
+      filterBtnColor: activeN>0 ? "#ffffff" : "#3a2f26",
+      filterBadge: activeN>0 ? " · "+activeN : "",
+      clearAll: ()=>this.setState({ cats:{}, tags:{}, strengths:{}, regions:{}, searchText:"" }),
+      resultCount: filtered.length+" drink su "+this.drinks.length,
+      mapCount: filtered.length+" luoghi in mappa",
+      filterGroups,
+      catNav,
+      activeChips: [],
+      groups,
+      hasResults: filtered.length>0,
+      noResults: filtered.length===0
+    };
+  }
+}
+</script>
+</body>
+</html>
