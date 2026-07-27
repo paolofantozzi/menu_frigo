@@ -314,11 +314,6 @@ class Component extends DCLogic {
       preview:"Invecchiata a lungo in tradizionali botti di rovere, questa vodka acquisisce un colore ambrato profondo e una complessità aromatica sorprendente.",
       desc:["La Soplica Staropolska (Antica Polacca) rappresenta l'apice della maestria distillatoria polacca. Invecchiata a lungo in tradizionali botti di rovere, questa vodka acquisisce un colore ambrato profondo e una complessità aromatica sorprendente.", "Al naso sprigiona sentori ricchi di noci tostate, prugne secche e chiodi di garofano, mentre al palato risulta incredibilmente morbida e vellutata. È un omaggio alle antiche ricette della nobiltà polacca."],
       link:{label:"soplica.pl", url:"https://soplica.pl"} },
-    { id:"zubrowka", name:"Żubrówka", cat:"Vodka", abv:40, place:"Białystok, Polonia", region:"Polonia", lat:53.1325, lng:23.1688, tags:["#vodka", "#erbacea", "#secca", "#aromatica"], img:"./images/zubrowka.jpg",
-      teaser:"Conosciuta a livello mondiale come la 'vodka all'erba del bisonte', la Zubrowka è un distillato di segale unico nel suo genere.",
-      preview:"Ogni bottiglia contiene un filo d'erba del bisonte (Hierochloe odorata) raccolta a mano nella foresta primordiale di Białowieża.",
-      desc:["Conosciuta a livello mondiale come la 'vodka all'erba del bisonte', la Zubrowka è un distillato di segale unico nel suo genere. Ogni bottiglia contiene un filo d'erba del bisonte (Hierochloe odorata) raccolta a mano nella foresta primordiale di Białowieża.", "Questo elemento botanico conferisce al distillato un delicato colore paglierino e un profumo erbaceo inconfondibile, arricchito da note di vaniglia e mandorla."],
-      link:{label:"zubrowka.com", url:"https://zubrowka.com"} },
     { id:"soplica-nocciola", name:"Soplica Nocciola", cat:"Vodka", abv:28, place:"Oborniki, Polonia", region:"Polonia", lat:52.6456, lng:16.8117, tags:["#liquore", "#dolce", "#nocciola", "#morbido"], img:"./images/soplica-nocciola.jpg",
       teaser:"Un celebre liquore polacco a base di vodka pura aromatizzato alla nocciola.",
       preview:"Questo prodotto unisce la forza dell'alcol di alta qualità con la dolcezza avvolgente delle nocciole tostate.",
@@ -574,16 +569,38 @@ class Component extends DCLogic {
       preview:"Incorpora botaniche tipiche della campagna normanna, tra cui la mela locale che dona una nota fruttata e croccante.",
       desc:["Distillato artigianalmente in Normandia. Incorpora botaniche tipiche della campagna normanna, tra cui la mela locale che dona una nota fruttata e croccante.", "Elegante, raffinato e dal profilo fresco."],
       link:{label:"3r-normand.com", url:"https://3r-normand.com"} },
-    { id:"gin-mare", name:"Gin Mare", cat:"Gin", abv:42.7, place:"Vilanova i la Geltrú, Spagna", region:"Spagna", lat:41.2242, lng:1.7256, tags:["#gin", "#mediterraneo", "#erbaceo", "#oliva"], img:"./images/gin-mare.jpg",
-      teaser:"Icona del gin mediterraneo.",
-      preview:"Utilizza un bouquet atipico: oliva Arbequina, rosmarino, timo e basilico.",
-      desc:["Icona del gin mediterraneo. Utilizza un bouquet atipico: oliva Arbequina, rosmarino, timo e basilico.", "Al naso è una passeggiata in un orto litoraneo. Al palato è sapido e profondamente aromatico."],
-      link:{label:"ginmare.com", url:"https://ginmare.com"} },
     { id:"gin-mare-capri", name:"Gin Mare Capri", cat:"Gin", abv:42.7, place:"Vilanova i la Geltrú, Spagna", region:"Spagna", lat:41.2242, lng:1.7256, tags:["#gin", "#agrumato", "#bergamotto", "#mediterraneo"], img:"./images/gin-mare-capri.jpg",
       teaser:"Edizione decimo anniversario dedicata al Sud Italia.",
       preview:"Aggiunge i profumatissimi limoni IGP di Capri e il bergamotto della Calabria.",
       desc:["Edizione decimo anniversario dedicata al Sud Italia. Aggiunge i profumatissimi limoni IGP di Capri e il bergamotto della Calabria.", "Più solare e agrumato dell'originale, attenuando leggermente l'impatto sapido."],
       link:{label:"ginmare.com", url:"https://ginmare.com"} },
+    {
+      "id": "pijana-wisnia",
+      "name": "Pijana Wiśnia",
+      "cat": "Liquori e amari",
+      "abv": 17.5,
+      "place": "Leopoli, Ucraina",
+      "region": "Ucraina",
+      "lat": 49.8397,
+      "lng": 24.0297,
+      "tags": [
+        "#liquore",
+        "#ciliegia",
+        "#dolce",
+        "#fruttato"
+      ],
+      "img": "./images/pijana-wisnia.png",
+      "teaser": "La Pijana Wiśnia (Ciliegia Ubriaca) è un celebre e storico liquore originario di Leopoli, amato in tutta l'Europa dell'Est.",
+      "preview": "Realizzato infondendo succose ciliegie in alcol, offre un perfetto equilibrio tra dolcezza e la naturale acidità del frutto.",
+      "desc": [
+        "La Pijana Wiśnia (Ciliegia Ubriaca) è un celebre e storico liquore alla ciliegia originario di Leopoli, diventato un vero e proprio fenomeno di culto in tutta l'Europa dell'Est. Realizzato infondendo succose ciliegie intere in alcol di alta qualità, offre un perfetto equilibrio tra dolcezza e acidità fruttata.",
+        "Al palato è ricco, avvolgente e intensamente fruttato, restituendo il sapore autentico e persistente della ciliegia matura. Viene tradizionalmente servito in ampi calici di cristallo, sia freddo che caldo, accompagnato dalle stesse ciliegie 'ubriache' adagiate sul fondo del bicchiere."
+      ],
+      "link": {
+        "label": "fest.lviv.ua",
+        "url": "https://www.fest.lviv.ua/en/projects/pijanawisnia/"
+      }
+    }
   ];
 
   catOrder = ["Vodka", "Liquori e amari", "Scotch whisky", "Gin"];
@@ -626,7 +643,7 @@ class Component extends DCLogic {
     const map = L.map(el, { zoomControl:true, worldCopyJump:true, attributionControl:false });
     this.map = map;
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", { subdomains:"abcd", maxZoom:19 }).addTo(map);
-    
+
     this.mapGroups = {};
     this.drinks.forEach(d=>{
       const k = d.lat + "," + d.lng;
@@ -641,14 +658,14 @@ class Component extends DCLogic {
       const m = L.marker([drinks[0].lat, drinks[0].lng], { icon });
       this.markers[k] = m;
     });
-    
+
     map.on("popupopen", (e)=>{
       const btns = e.popup.getElement().querySelectorAll("[data-goto]");
       btns.forEach(btn => {
         btn.addEventListener("click", ()=>this.focusDrink(btn.getAttribute("data-goto"), false));
       });
     });
-    
+
     map.setView([25,5], 1);
     this.syncMarkers(true);
   }
@@ -658,17 +675,17 @@ class Component extends DCLogic {
     const visible = this.drinks.filter(d=>this.matches(d));
     const key = visible.map(d=>d.id).join(",");
     if(!force && key===this.state.visKey) return;
-    
+
     const visSet = new Set(visible.map(d=>d.id));
-    
+
     Object.keys(this.mapGroups).forEach(k=>{
       const groupDrinks = this.mapGroups[k];
       const visDrinks = groupDrinks.filter(d => visSet.has(d.id));
       const m = this.markers[k];
-      
+
       if(visDrinks.length > 0){
         if(!this.map.hasLayer(m)) m.addTo(this.map);
-        
+
         let html = `<div style="min-width:150px; max-height:250px; overflow-y:auto; padding-right:5px;">`;
         visDrinks.forEach((d, idx) => {
           if(idx > 0) html += `<div style="height:1px; background:#e1ebf0; margin:12px 0;"></div>`;
