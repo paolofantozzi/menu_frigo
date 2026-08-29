@@ -1067,7 +1067,12 @@
       // (Claude wrote it into the HTML) so it passes through unchanged.
       let stored = this.id ? getSlot(this.id) : this._local;
       if (stored && stored.u && !/^data:image\//i.test(stored.u)) stored = null;
-      const srcAttr = this.getAttribute('src') || '';
+      // The unrendered template copy of a design doc keeps its raw
+      // bindings in the DOM, so an upgrade can see src="{{ drink.img }}".
+      // Treat an unresolved binding as no src at all — fetching it is a
+      // guaranteed 404.
+      const rawSrc = this.getAttribute('src') || '';
+      const srcAttr = /\{\{[\s\S]*?\}\}/.test(rawSrc) ? '' : rawSrc;
       this._userUrl = (stored && stored.u) || null;
       const url = this._userUrl || srcAttr;
       // Don't clobber an in-flight reframe with a store-triggered re-render.
