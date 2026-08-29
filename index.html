@@ -641,7 +641,7 @@ class Component extends DCLogic {
     const map = L.map(el, { zoomControl:true, worldCopyJump:true, attributionControl:false });
     this.map = map;
     const CARTO_API_KEY = "cb1_2j5l_1_30055f1a2780c6effc0746e4";
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?api_key="+CARTO_API_KEY, { subdomains:"abcd", maxZoom:19 }).addTo(map);
+    L.tileLayer("https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key="+CARTO_API_KEY, { maxZoom:19 }).addTo(map);
 
     this.mapGroups = {};
     this.drinks.forEach(d=>{
