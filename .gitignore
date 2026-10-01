@@ -1,0 +1,24 @@
+# Claude Code memory, session history and login credentials for this project.
+# This lives on disk here (bind-mounted into the devcontainer) so login only
+# happens once per project, but it must never be committed.
+/.devcontainer/claude-home/
+
+# Static site — nothing to build, bundle or install; the repo root is the deploy root.
+
+# Editors / OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+
+
+# Not part of the site: sandbox machinery and imported Claude session data
+/.cdforge.json
+/.claude/
+/.devcontainer/
+/.githooks/
+/-home-antigravity-workspace-menu-frigo/
+
+# Project documents: not served on the site
+/README.md
+/CLAUDE.md
+/CHANGELOG.md
